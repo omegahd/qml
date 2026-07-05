@@ -16,9 +16,9 @@ import (
 	"time"
 
 	. "gopkg.in/check.v1"
-	"github.com/neclepsio/qml"
-	"github.com/neclepsio/qml/cpptest"
-	"github.com/neclepsio/qml/gl/2.0"
+	"github.com/omegahd/qml"
+	"github.com/omegahd/qml/cpptest"
+	"github.com/omegahd/qml/gl/2.0"
 	"path/filepath"
 )
 

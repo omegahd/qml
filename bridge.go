@@ -19,7 +19,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	"github.com/neclepsio/qml/cdata"
+	"github.com/omegahd/qml/cdata"
 )
 
 var (

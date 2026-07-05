@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/neclepsio/qml"
+	"github.com/omegahd/qml"
 )
 
 func main() {

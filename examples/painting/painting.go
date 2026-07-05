@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/neclepsio/qml"
-	"github.com/neclepsio/qml/gl/2.0"
+	"github.com/omegahd/qml"
+	"github.com/omegahd/qml/gl/2.0"
 )
 
 func main() {

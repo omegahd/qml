@@ -9,7 +9,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"github.com/neclepsio/qml/gl/glbase"
+	"github.com/omegahd/qml/gl/glbase"
 	"image"
 	"image/color"
 	"io"

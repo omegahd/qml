@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/neclepsio/qml"
+	"github.com/omegahd/qml"
 	"image/color"
 	"math/rand"
 	"os"

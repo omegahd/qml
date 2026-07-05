@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/neclepsio/qml"
+	"github.com/omegahd/qml"
 )
 
 func main() {

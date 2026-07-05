@@ -19,7 +19,7 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/neclepsio/qml/gl/glbase"
+	"github.com/omegahd/qml/gl/glbase"
 )
 
 // API returns a value that offers methods matching the OpenGL version ES2 API.

@@ -1,6 +1,6 @@
 # QML support for the Go language
 
-Notes for neclepsio/qml
+Notes for omegahd/qml
 -----------------------
 
 This repository aims to keep go-qml/qml working. It includes several fixed and new features from other repositories
