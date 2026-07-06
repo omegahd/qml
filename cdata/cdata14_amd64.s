@@ -11,9 +11,11 @@ TEXT ·Ref(SB),NOSPLIT,$8-8
 	RET
 */
 
+// runtime·main_main is only a linkname alias for main·main and has no
+// symbol of its own under external linking, so reference main·main directly.
 TEXT ·Addrs(SB),NOSPLIT,$0-16
 	MOVQ	$runtime·main(SB), AX
 	MOVQ	AX, ret+0(FP)
-	MOVQ	$runtime·main_main(SB), AX
+	MOVQ	$main·main(SB), AX
 	MOVQ	AX, ret+8(FP)
 	RET

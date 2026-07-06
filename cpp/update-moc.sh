@@ -5,7 +5,7 @@ cd `dirname $0`
 
 subdir=`basename $PWD`
 
-export QT_SELECT=5
+export QT_SELECT=6
 
 ALL=moc_all.cpp
 

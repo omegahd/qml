@@ -9,10 +9,27 @@ import (
 	"fmt"
 	"image/color"
 	"reflect"
+	"runtime"
 	"strings"
+	"time"
 	"unicode"
 	"unsafe"
 )
+
+// Rect corresponds to the QML rect basic type (QRect/QRectF).
+type Rect struct {
+	X, Y, Width, Height float64
+}
+
+// Point corresponds to the QML point basic type (QPoint/QPointF).
+type Point struct {
+	X, Y float64
+}
+
+// Size corresponds to the QML size basic type (QSize/QSizeF).
+type Size struct {
+	Width, Height float64
+}
 
 var (
 	intIs64 bool
@@ -32,6 +49,11 @@ var (
 	typeFloat32    = reflect.TypeOf(float32(0))
 	typeIface      = reflect.TypeOf(new(interface{})).Elem()
 	typeRGBA       = reflect.TypeOf(color.RGBA{})
+	typeTime       = reflect.TypeOf(time.Time{})
+	typeBytes      = reflect.TypeOf([]byte(nil))
+	typeRect       = reflect.TypeOf(Rect{})
+	typePoint      = reflect.TypeOf(Point{})
+	typeSize       = reflect.TypeOf(Size{})
 	typeObjSlice   = reflect.TypeOf([]Object(nil))
 	typeObject     = reflect.TypeOf([]Object(nil)).Elem()
 	typePainter    = reflect.TypeOf(&Painter{})
@@ -108,17 +130,62 @@ func packDataValue(value interface{}, dvalue *C.DataValue, engine *Engine, owner
 	case color.RGBA:
 		dvalue.dataType = C.DTColor
 		*(*uint32)(datap) = uint32(value.A)<<24 | uint32(value.R)<<16 | uint32(value.G)<<8 | uint32(value.B)
+	case time.Time:
+		dvalue.dataType = C.DTTime
+		*(*int64)(datap) = value.UnixMilli()
+	case []byte:
+		// The C++ side copies the data during the call, while the
+		// caller keeps the slice alive.
+		dvalue.dataType = C.DTByteArray
+		cdata, cdatalen := unsafeBytesData(value)
+		*(**C.char)(datap) = cdata
+		dvalue.len = cdatalen
+	case Rect:
+		dvalue.dataType = C.DTRect
+		d := (*[4]C.double)(C.malloc(C.size_t(unsafe.Sizeof(C.double(0)) * 4)))
+		d[0], d[1], d[2], d[3] = C.double(value.X), C.double(value.Y), C.double(value.Width), C.double(value.Height)
+		*(*unsafe.Pointer)(datap) = unsafe.Pointer(d)
+	case Point:
+		dvalue.dataType = C.DTPoint
+		d := (*[2]C.double)(C.malloc(C.size_t(unsafe.Sizeof(C.double(0)) * 2)))
+		d[0], d[1] = C.double(value.X), C.double(value.Y)
+		*(*unsafe.Pointer)(datap) = unsafe.Pointer(d)
+	case Size:
+		dvalue.dataType = C.DTSize
+		d := (*[2]C.double)(C.malloc(C.size_t(unsafe.Sizeof(C.double(0)) * 2)))
+		d[0], d[1] = C.double(value.Width), C.double(value.Height)
+		*(*unsafe.Pointer)(datap) = unsafe.Pointer(d)
 	default:
-		dvalue.dataType = C.DTObject
 		if obj, ok := value.(Object); ok {
+			dvalue.dataType = C.DTObject
 			*(*unsafe.Pointer)(datap) = obj.Common().addr
-		} else {
-			*(*unsafe.Pointer)(datap) = wrapGoValue(engine, value, owner)
+			return
 		}
+		if v := reflect.ValueOf(value); v.Kind() == reflect.Slice || v.Kind() == reflect.Array {
+			// Other slices and arrays become a QVariantList, which QML
+			// sees as a JS array, with elements packed recursively.
+			// The C++ side copies all the data during the call below.
+			n := v.Len()
+			var listp unsafe.Pointer
+			if n == 0 {
+				listp = unsafe.Pointer(C.newVariantList(nil, 0))
+			} else {
+				dvs := make([]C.DataValue, n)
+				for i := 0; i < n; i++ {
+					packDataValue(v.Index(i).Interface(), &dvs[i], engine, owner)
+				}
+				listp = unsafe.Pointer(C.newVariantList(&dvs[0], C.int(n)))
+			}
+			// The elements above may reference Go memory owned by value.
+			runtime.KeepAlive(value)
+			dvalue.dataType = C.DTVariantList
+			*(*unsafe.Pointer)(datap) = listp
+			return
+		}
+		dvalue.dataType = C.DTObject
+		*(*unsafe.Pointer)(datap) = wrapGoValue(engine, value, owner)
 	}
 }
-
-// TODO Handle byte slices.
 
 // unpackDataValue converts a value shipped by C++ into a native Go value.
 //
@@ -152,6 +219,27 @@ func unpackDataValue(dvalue *C.DataValue, engine *Engine) interface{} {
 	case C.DTColor:
 		var c uint32 = *(*uint32)(datap)
 		return color.RGBA{byte(c >> 16), byte(c >> 8), byte(c), byte(c >> 24)}
+	case C.DTTime:
+		return time.UnixMilli(*(*int64)(datap))
+	case C.DTByteArray:
+		b := C.GoBytes(*(*unsafe.Pointer)(datap), dvalue.len)
+		C.free(*(*unsafe.Pointer)(datap))
+		return b
+	case C.DTRect:
+		d := (*[4]C.double)(*(*unsafe.Pointer)(datap))
+		r := Rect{float64(d[0]), float64(d[1]), float64(d[2]), float64(d[3])}
+		C.free(*(*unsafe.Pointer)(datap))
+		return r
+	case C.DTPoint:
+		d := (*[2]C.double)(*(*unsafe.Pointer)(datap))
+		p := Point{float64(d[0]), float64(d[1])}
+		C.free(*(*unsafe.Pointer)(datap))
+		return p
+	case C.DTSize:
+		d := (*[2]C.double)(*(*unsafe.Pointer)(datap))
+		s := Size{float64(d[0]), float64(d[1])}
+		C.free(*(*unsafe.Pointer)(datap))
+		return s
 	case C.DTGoAddr:
 		// ObjectByName also does this fold conversion, to have access
 		// to the cvalue. Perhaps the fold should be returned.
@@ -221,6 +309,16 @@ func dataTypeOf(typ reflect.Type) C.DataType {
 		return C.DTAny
 	case typeRGBA:
 		return C.DTColor
+	case typeTime:
+		return C.DTTime
+	case typeBytes:
+		return C.DTByteArray
+	case typeRect:
+		return C.DTRect
+	case typePoint:
+		return C.DTPoint
+	case typeSize:
+		return C.DTSize
 	case typeObjSlice:
 		return C.DTListProperty
 	}

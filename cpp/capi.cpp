@@ -1,6 +1,8 @@
 #include <QtWidgets/QApplication>
 #include <QtQuick/QQuickView>
 #include <QtQuick/QQuickItem>
+#include <QtQuick/QQuickWindow>
+#include <QtQuick/QSGRendererInterface>
 #include <QtQml/QtQml>
 #include <QtCore/QDebug>
 #include <QtQuick/QQuickImageProvider>
@@ -28,7 +30,7 @@ error *errorf(const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
-    QString str = QString().vsprintf(format, ap);
+    QString str = QString::vasprintf(format, ap);
     va_end(ap);
     QByteArray ba = str.toUtf8();
     return local_strdup(ba.constData());
@@ -38,7 +40,7 @@ void panicf(const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
-    QString str = QString().vsprintf(format, ap);
+    QString str = QString::vasprintf(format, ap);
     va_end(ap);
     QByteArray ba = str.toUtf8();
     hookPanic(local_strdup(ba.constData()));
@@ -46,6 +48,11 @@ void panicf(const char *format, ...)
 
 void newGuiApplication()
 {
+    // The Qt Quick scene graph renders via the RHI abstraction since Qt 6.
+    // Force the OpenGL backend so that native GL painting (the gl/ packages
+    // and Paint methods on Go types) keeps a current GL context to work with.
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+
     static char empty[1] = {0};
     static char *argv[] = {empty, 0};
     static int argc = 1;
@@ -63,6 +70,13 @@ void applicationExec()
 void applicationExit()
 {
     qApp->exit(0);
+}
+
+void applicationTeardown()
+{
+    // Restore the default message handler so that Qt's logging during
+    // process/DLL teardown does not call back into Go.
+    qInstallMessageHandler(0);
 }
 
 void applicationFlushAll()
@@ -455,20 +469,20 @@ error *objectSetProperty(QObject_ *object, const char *name, DataValue *value)
     }
 
     QMetaProperty prop = metaObject->property(propIndex);
-    int propType = prop.userType();
+    QMetaType propType = prop.metaType();
     void *valueArg;
-    if (propType == QMetaType::QVariant) {
+    if (propType.id() == QMetaType::QVariant) {
         valueArg = (void *)&var;
     } else {
-        int varType = var.userType();
+        QMetaType varType = var.metaType();
         QVariant saved = var;
         if (propType != varType && !var.convert(propType)) {
-            if (varType == QMetaType::QObjectStar) {
+            if (varType.id() == QMetaType::QObjectStar) {
                 return errorf("cannot set property \"%s\" with type %s to value of %s*",
-                        name, QMetaType::typeName(propType), saved.value<QObject*>()->metaObject()->className());
+                        name, propType.name(), saved.value<QObject*>()->metaObject()->className());
             } else {
                 return errorf("cannot set property \"%s\" with type %s to value of %s",
-                        name, QMetaType::typeName(propType), QMetaType::typeName(varType));
+                        name, propType.name(), varType.name());
             }
         }
         valueArg = (void *)var.constData();
@@ -490,14 +504,17 @@ error *objectInvoke(QObject_ *object, const char *method, int methodLen, DataVal
     QGenericArgument arg[MaxParams];
     for (int i = 0; i < paramsLen; i++) {
         unpackDataValue(&paramsdv[i], &param[i]);
-        arg[i] = Q_ARG(QVariant, param[i]);
+        // Q_ARG produces QMetaMethodArgument in Qt 6; build the legacy
+        // QGenericArgument directly for the variadic invoke below.
+        arg[i] = QGenericArgument("QVariant", &param[i]);
     }
     if (paramsLen > 10) {
         panicf("fix the parameter dispatching");
     }
 
     if (qobject == 0) {
-      return errorf("method called on null object: %s", method);
+      // The method name is not null-terminated; always bound it by methodLen.
+      return errorf("method called on null object: %.*s", methodLen, method);
     }
 
     const QMetaObject *metaObject = qobject->metaObject();
@@ -510,7 +527,7 @@ error *objectInvoke(QObject_ *object, const char *method, int methodLen, DataVal
             if (name.length() == methodLen && qstrncmp(name.constData(), method, methodLen) == 0) {
                 if (metaMethod.parameterCount() < paramsLen) {
                     // TODO Might continue looking to see if a different signal has the same name and enough arguments.
-                    return errorf("method \"%s\" has too few parameters for provided arguments", method);
+                    return errorf("method \"%.*s\" has too few parameters for provided arguments", methodLen, method);
                 }
 
                 bool ok;
@@ -518,11 +535,11 @@ error *objectInvoke(QObject_ *object, const char *method, int methodLen, DataVal
                     ok = metaMethod.invoke(qobject, Qt::DirectConnection,
                         arg[0], arg[1], arg[2], arg[3], arg[4], arg[5], arg[6], arg[7], arg[8], arg[9]);
                 } else {
-                    ok = metaMethod.invoke(qobject, Qt::DirectConnection, Q_RETURN_ARG(QVariant, result),
+                    ok = metaMethod.invoke(qobject, Qt::DirectConnection, QGenericReturnArgument("QVariant", &result),
                         arg[0], arg[1], arg[2], arg[3], arg[4], arg[5], arg[6], arg[7], arg[8], arg[9]);
                 }
                 if (!ok) {
-                    return errorf("invalid parameters to method \"%s\"", method);
+                    return errorf("invalid parameters to method \"%.*s\"", methodLen, method);
                 }
 
                 packDataValue(&result, resultdv);
@@ -531,7 +548,7 @@ error *objectInvoke(QObject_ *object, const char *method, int methodLen, DataVal
         }
     }
 
-    return errorf("object does not expose a method \"%s\"", method);
+    return errorf("object does not expose a method \"%.*s\"", methodLen, method);
 }
 
 void objectFindChild(QObject_ *object, QString_ *name, DataValue *resultdv)
@@ -692,6 +709,34 @@ void unpackDataValue(DataValue *value, QVariant_ *var)
     case DTColor:
         *qvar = QColor::fromRgba(*(QRgb*)(value->data));
         break;
+    case DTTime:
+        *qvar = QDateTime::fromMSecsSinceEpoch(*(qint64*)(value->data));
+        break;
+    case DTByteArray:
+        // Go keeps the data alive during the call; QByteArray copies it.
+        *qvar = QByteArray(*(char **)(value->data), value->len);
+        break;
+    case DTRect:
+        {
+            double *d = *(double **)(value->data);
+            *qvar = QRectF(d[0], d[1], d[2], d[3]);
+            free(d);
+        }
+        break;
+    case DTPoint:
+        {
+            double *d = *(double **)(value->data);
+            *qvar = QPointF(d[0], d[1]);
+            free(d);
+        }
+        break;
+    case DTSize:
+        {
+            double *d = *(double **)(value->data);
+            *qvar = QSizeF(d[0], d[1]);
+            free(d);
+        }
+        break;
     case DTVariantList:
         *qvar = **(QVariantList**)(value->data);
         delete *(QVariantList**)(value->data);
@@ -719,8 +764,9 @@ void packDataValue(QVariant_ *var, DataValue *value)
     // There's apparently no better way to handle this since that's
     // how the types with well defined sizes (qint64) are mapped to
     // meta-types (QMetaType::LongLong).
-    switch ((int)qvar->type()) {
-    case QVariant::Invalid:
+    switch (qvar->metaType().id()) {
+    case QMetaType::UnknownType:
+    case QMetaType::Nullptr: // JS null arrives as Nullptr rather than an invalid variant in Qt 6.
         value->dataType = DTInvalid;
         break;
     case QMetaType::QUrl:
@@ -772,6 +818,58 @@ void packDataValue(QVariant_ *var, DataValue *value)
         value->dataType = DTColor;
         *(unsigned int*)(value->data) = qvar->value<QColor>().rgba();
         break;
+    case QMetaType::QDate:
+    case QMetaType::QDateTime:
+        {
+            QDateTime dt = qvar->toDateTime();
+            if (!dt.isValid()) {
+                value->dataType = DTInvalid;
+                break;
+            }
+            value->dataType = DTTime;
+            *(qint64*)(value->data) = dt.toMSecsSinceEpoch();
+        }
+        break;
+    case QMetaType::QByteArray:
+        {
+            QByteArray ba = qvar->toByteArray();
+            value->dataType = DTByteArray;
+            value->len = ba.size();
+            char *giveaway = (char *)malloc(ba.size());
+            memcpy(giveaway, ba.constData(), ba.size());
+            *(char**)(value->data) = giveaway;
+        }
+        break;
+    case QMetaType::QRect:
+    case QMetaType::QRectF:
+        {
+            QRectF r = qvar->toRectF();
+            double *d = (double *)malloc(sizeof(double) * 4);
+            d[0] = r.x(); d[1] = r.y(); d[2] = r.width(); d[3] = r.height();
+            value->dataType = DTRect;
+            *(double**)(value->data) = d;
+        }
+        break;
+    case QMetaType::QPoint:
+    case QMetaType::QPointF:
+        {
+            QPointF p = qvar->toPointF();
+            double *d = (double *)malloc(sizeof(double) * 2);
+            d[0] = p.x(); d[1] = p.y();
+            value->dataType = DTPoint;
+            *(double**)(value->data) = d;
+        }
+        break;
+    case QMetaType::QSize:
+    case QMetaType::QSizeF:
+        {
+            QSizeF s = qvar->toSizeF();
+            double *d = (double *)malloc(sizeof(double) * 2);
+            d[0] = s.width(); d[1] = s.height();
+            value->dataType = DTSize;
+            *(double**)(value->data) = d;
+        }
+        break;
     case QMetaType::QVariantList:
         {
             QVariantList varlist = qvar->toList();
@@ -806,17 +904,25 @@ void packDataValue(QVariant_ *var, DataValue *value)
             *(DataValue**)(value->data) = dvlist;
         }
         break;
-    case QMetaType::User:
+    default:
         {
-            static const int qjstype = QVariant::fromValue(QJSValue()).userType();
-            if (qvar->userType() == qjstype) {
+            // User types are no longer clamped to a single QMetaType::User id
+            // in Qt 6, so QJSValue must be recognized by its actual meta type.
+            static const int qjstype = qMetaTypeId<QJSValue>();
+            if (qvar->metaType().id() == qjstype) {
                 auto var = qvar->value<QJSValue>().toVariant();
                 packDataValue(&var, value);
+                break;
             }
         }
-        break;
-    default:
-        if (qvar->type() == (int)QMetaType::QObjectStar || qvar->canConvert<QObject *>()) {
+        // Enum properties carry their own meta type in Qt 6 rather than
+        // arriving as plain ints as they did in Qt 5.
+        if (qvar->metaType().flags() & QMetaType::IsEnumeration) {
+            value->dataType = DTInt32;
+            *(qint32*)(value->data) = (qint32)qvar->toInt();
+            break;
+        }
+        if (qvar->metaType().id() == QMetaType::QObjectStar || qvar->canConvert<QObject *>()) {
             QObject *qobject = qvar->value<QObject *>();
             if (qobject->inherits("GoValue")) {
                 value->dataType = DTGoAddr;
@@ -864,7 +970,12 @@ void packDataValue(QVariant_ *var, DataValue *value)
                 break;
             }
         }
-        panicf("unsupported variant type: %d (%s)", qvar->type(), qvar->typeName());
+        if (qvar->metaType().id() >= QMetaType::User) {
+            // Unknown user types were quietly packed as unsupported
+            // (DTUnknown, the caller-zeroed value) under Qt 5; keep that.
+            break;
+        }
+        panicf("unsupported variant type: %d (%s)", qvar->metaType().id(), qvar->typeName());
         break;
     }
 }
@@ -881,32 +992,56 @@ QVariantList_ *newVariantList(DataValue *list, int len)
     return vlist;
 }
 
-QObject *listPropertyAt(QQmlListProperty<QObject> *list, int i)
+// Qt 6 dropped the spare dummy1/dummy2 fields that were used to carry the
+// Go reflect indexes, so they now live in a holder referenced by the data
+// field. Holders are interned per (ref, reflectIndex, setIndex) triple and
+// kept alive for the process lifetime, since copies of the QQmlListProperty
+// value may outlive any single property read.
+struct GoListPropertyData {
+    GoRef ref;
+    intptr_t reflectIndex;
+    intptr_t setIndex;
+};
+
+static GoListPropertyData *internListPropertyData(GoRef ref, intptr_t reflectIndex, intptr_t setIndex)
 {
-    return reinterpret_cast<QObject *>(hookListPropertyAt((uintptr_t)list->data, (intptr_t)list->dummy1, (intptr_t)list->dummy2, i));
+    static QHash<QPair<quintptr, QPair<intptr_t, intptr_t> >, GoListPropertyData *> interned;
+    auto key = qMakePair((quintptr)ref, qMakePair(reflectIndex, setIndex));
+    GoListPropertyData *&data = interned[key];
+    if (!data) {
+        data = new GoListPropertyData{ref, reflectIndex, setIndex};
+    }
+    return data;
 }
 
-int listPropertyCount(QQmlListProperty<QObject> *list)
+QObject *listPropertyAt(QQmlListProperty<QObject> *list, qsizetype i)
 {
-    return hookListPropertyCount((uintptr_t)list->data, (intptr_t)list->dummy1, (intptr_t)list->dummy2);
+    GoListPropertyData *data = static_cast<GoListPropertyData *>(list->data);
+    return reinterpret_cast<QObject *>(hookListPropertyAt(data->ref, data->reflectIndex, data->setIndex, i));
+}
+
+qsizetype listPropertyCount(QQmlListProperty<QObject> *list)
+{
+    GoListPropertyData *data = static_cast<GoListPropertyData *>(list->data);
+    return hookListPropertyCount(data->ref, data->reflectIndex, data->setIndex);
 }
 
 void listPropertyAppend(QQmlListProperty<QObject> *list, QObject *obj)
 {
-    hookListPropertyAppend((uintptr_t)list->data, (intptr_t)list->dummy1, (intptr_t)list->dummy2, obj);
+    GoListPropertyData *data = static_cast<GoListPropertyData *>(list->data);
+    hookListPropertyAppend(data->ref, data->reflectIndex, data->setIndex, obj);
 }
 
 void listPropertyClear(QQmlListProperty<QObject> *list)
 {
-    hookListPropertyClear((uintptr_t)list->data, (intptr_t)list->dummy1, (intptr_t)list->dummy2);
+    GoListPropertyData *data = static_cast<GoListPropertyData *>(list->data);
+    hookListPropertyClear(data->ref, data->reflectIndex, data->setIndex);
 }
 
 QQmlListProperty_ *newListProperty(GoRef ref, intptr_t reflectIndex, intptr_t setIndex)
 {
     QQmlListProperty<QObject> *list = new QQmlListProperty<QObject>();
-    list->data = (void*)ref;
-    list->dummy1 = (void*)reflectIndex;
-    list->dummy2 = (void*)setIndex;
+    list->data = internListPropertyData(ref, reflectIndex, setIndex);
     list->at = listPropertyAt;
     list->count = listPropertyCount;
     list->append = listPropertyAppend;
@@ -918,7 +1053,7 @@ void internalLogHandler(QtMsgType severity, const QMessageLogContext &context, c
 {
     QByteArray textba = text.toUtf8();
     const int fileLength = context.file ? strlen(context.file) : 0;
-    LogMessage message = {severity, textba.constData(), textba.size(), context.file, fileLength, context.line};
+    LogMessage message = {severity, textba.constData(), (int)textba.size(), context.file, fileLength, context.line};
     hookLogHandler(&message);
 }
 

@@ -1,9 +1,9 @@
 package qml
 
 // #cgo CPPFLAGS: -I./cpp
-// #cgo CXXFLAGS: -std=c++0x -pedantic-errors -Wall -fno-strict-aliasing
+// #cgo CXXFLAGS: -std=c++17 -Wall -fno-strict-aliasing
 // #cgo LDFLAGS: -lstdc++
-// #cgo pkg-config: Qt5Core Qt5Widgets Qt5Quick
+// #cgo pkg-config: Qt6Core Qt6Widgets Qt6Quick
 //
 // #include <stdlib.h>
 //
@@ -45,6 +45,12 @@ func init() {
 //
 // The Run function must necessarily be called from the same goroutine as
 // the main function or the application may fail when running on Mac OS.
+// Running reports whether the Qt application and its event loop were
+// already started by a call to Run.
+func Running() bool {
+	return atomic.LoadInt32(&initialized) != 0
+}
+
 func Run(f func() error) error {
 	if cdata.Ref() != guiMainRef {
 		panic("Run must be called on the initial goroutine so apps are portable to Mac OS")
@@ -61,7 +67,12 @@ func Run(f func() error) error {
 		C.applicationExit()
 	}()
 	C.applicationExec()
-	return <-done
+	err := <-done
+	// Break the C to Go callback paths before the process may exit. Qt 6
+	// logs from DLL teardown during exit, and a message handler calling
+	// back into Go at that point aborts the program.
+	C.applicationTeardown()
+	return err
 }
 
 // RunMain runs f in the main QML thread and waits for f to return.
@@ -397,6 +408,16 @@ func deref(value reflect.Value) reflect.Value {
 	panic("cannot happen")
 }
 
+// packableStruct returns whether typ is a struct type that packDataValue
+// converts into a native QML value rather than wrapping as an object.
+func packableStruct(typ reflect.Type) bool {
+	switch typ {
+	case typeRGBA, typeTime, typeRect, typePoint, typeSize:
+		return true
+	}
+	return false
+}
+
 //export hookGoValueReadField
 func hookGoValueReadField(enginep unsafe.Pointer, foldr C.GoRef, reflectIndex, getIndex, setIndex C.int, resultdv *C.DataValue) {
 	fold := ensureEngine(enginep, foldr)
@@ -412,14 +433,16 @@ func hookGoValueReadField(enginep unsafe.Pointer, foldr C.GoRef, reflectIndex, g
 	// Cannot compare Type directly as field may be invalid (nil).
 	if field.Kind() == reflect.Slice && field.Type() == typeObjSlice {
 		// TODO Handle getters that return []qml.Object.
-		// TODO Handle other GoValue slices (!= []qml.Object).
 		resultdv.dataType = C.DTListProperty
 		*(*unsafe.Pointer)(unsafe.Pointer(&resultdv.data)) = C.newListProperty(C.GoRef(foldr), C.intptr_t(reflectIndex), C.intptr_t(setIndex))
 		return
 	}
 
+	// Other slices and the struct types with a value representation
+	// (color, time, rect, point, size) are packed by value below;
+	// remaining structs are wrapped so field access works on them.
 	fieldk := field.Kind()
-	if fieldk == reflect.Slice || fieldk == reflect.Struct && field.Type() != typeRGBA {
+	if fieldk == reflect.Struct && !packableStruct(field.Type()) {
 		if field.CanAddr() {
 			field = field.Addr()
 		} else if !hashable(field.Interface()) {

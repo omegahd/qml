@@ -1,11 +1,13 @@
 #include <private/qmetaobjectbuilder_p.h>
-
-#include <QtOpenGL/QtOpenGL>
-#include <QtOpenGL/QGLFunctions>
+#include <private/qobject_p.h>
 
 #include <QtQml/QtQml>
 #include <QtQml/QQmlEngine>
 #include <QtCore/QDebug>
+#include <QtGui/QOpenGLContext>
+#include <QtGui/QOpenGLFunctions>
+#include <QtOpenGL/QOpenGLFramebufferObject>
+#include <QtQuick/qquickopenglutils.h>
 
 #include "govalue.h"
 #include "capi.h"
@@ -145,7 +147,6 @@ GoPaintedValue::GoPaintedValue(GoRef ref, GoTypeInfo *typeInfo, QObject *parent)
     setParent(parent);
 
     QQuickItem::setFlag(QQuickItem::ItemHasContents, true);
-    QQuickPaintedItem::setRenderTarget(QQuickPaintedItem::FramebufferObject);
 }
 
 GoPaintedValue::~GoPaintedValue()
@@ -158,11 +159,50 @@ void GoPaintedValue::activate(int propIndex)
     valueMeta->activatePropIndex(propIndex);
 }
 
-void GoPaintedValue::paint(QPainter *painter)
+class GoPaintedValueRenderer : public QQuickFramebufferObject::Renderer
 {
-    painter->beginNativePainting();
-    hookGoValuePaint(qmlEngine(this), ref, typeInfo->paint->reflectIndex);
-    painter->endNativePainting();
+public:
+    GoPaintedValueRenderer(GoPaintedValue *value) : value(value) {};
+
+    void render()
+    {
+        QOpenGLContext *ctx = QOpenGLContext::currentContext();
+        QOpenGLFunctions *gl = ctx->functions();
+        QSize size = framebufferObject()->size();
+        gl->glViewport(0, 0, size.width(), size.height());
+
+        // Match the Qt 5 painted item conventions, where the GL paint
+        // engine provided pixel coordinates with the origin at the top-left
+        // corner of the item. The legacy matrix stack only exists under
+        // compatibility profiles, which is also what the fixed-function
+        // gl/1.x and gl/2.x APIs require.
+        enum { GoGLModelview = 0x1700, GoGLProjection = 0x1701 };
+        typedef void (QOPENGLF_APIENTRYP MatrixMode_t)(GLenum mode);
+        typedef void (QOPENGLF_APIENTRYP LoadIdentity_t)(void);
+        typedef void (QOPENGLF_APIENTRYP Ortho_t)(GLdouble l, GLdouble r, GLdouble b, GLdouble t, GLdouble n, GLdouble f);
+        MatrixMode_t matrixMode = (MatrixMode_t)ctx->getProcAddress("glMatrixMode");
+        LoadIdentity_t loadIdentity = (LoadIdentity_t)ctx->getProcAddress("glLoadIdentity");
+        Ortho_t ortho = (Ortho_t)ctx->getProcAddress("glOrtho");
+        if (matrixMode && loadIdentity && ortho) {
+            matrixMode(GoGLProjection);
+            loadIdentity();
+            ortho(0, size.width(), size.height(), 0, -1, 1);
+            matrixMode(GoGLModelview);
+            loadIdentity();
+        }
+
+        hookGoValuePaint(qmlEngine(value), value->ref, value->typeInfo->paint->reflectIndex);
+
+        QQuickOpenGLUtils::resetOpenGLState();
+    }
+
+private:
+    GoPaintedValue *value;
+};
+
+QQuickFramebufferObject::Renderer *GoPaintedValue::createRenderer() const
+{
+    return new GoPaintedValueRenderer(const_cast<GoPaintedValue *>(this));
 }
 
 QMetaObject *metaObjectFor(GoTypeInfo *typeInfo)
@@ -173,12 +213,12 @@ QMetaObject *metaObjectFor(GoTypeInfo *typeInfo)
 
     QMetaObjectBuilder mob;
     if (typeInfo->paint) {
-        mob.setSuperClass(&QQuickPaintedItem::staticMetaObject);
+        mob.setSuperClass(&QQuickFramebufferObject::staticMetaObject);
     } else {
         mob.setSuperClass(&QObject::staticMetaObject);
     }
     mob.setClassName(typeInfo->typeName);
-    mob.setFlags(QMetaObjectBuilder::DynamicMetaObject);
+    mob.setFlags(QtMocConstants::DynamicMetaObject);
 
     GoMemberInfo *memberInfo;
     

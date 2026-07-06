@@ -50,6 +50,11 @@ typedef enum {
     DTFloat64 = 17,
     DTFloat32 = 18,
     DTColor   = 19,
+    DTTime    = 20, // int64 milliseconds since the Unix epoch (QDateTime)
+    DTByteArray = 21, // pointer + len
+    DTRect    = 22, // pointer to double[4]: x, y, width, height
+    DTPoint   = 23, // pointer to double[2]: x, y
+    DTSize    = 24, // pointer to double[2]: width, height
 
     DTGoAddr       = 100,
     DTObject       = 101,
@@ -109,6 +114,7 @@ typedef struct {
 void newGuiApplication();
 void applicationExec();
 void applicationExit();
+void applicationTeardown();
 void applicationFlushAll();
 void setWindowIcon(QString_ *path);
 

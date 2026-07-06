@@ -6,8 +6,7 @@
 // away, and without it this package wouldn't exist.
 #include <private/qmetaobject_p.h>
 
-#include <QtQuick/QQuickPaintedItem>
-#include <QtGui/QPainter>
+#include <QtQuick/QQuickFramebufferObject>
 
 #include "capi.h"
 
@@ -32,7 +31,11 @@ private:
     GoValueMetaObject *valueMeta;
 };
 
-class GoPaintedValue : public QQuickPaintedItem
+// Custom types with a Paint method render through the OpenGL-backed
+// framebuffer object item. Qt 6 removed the FramebufferObject render
+// target of QQuickPaintedItem that was used with Qt 5, and its raster
+// Image target cannot host native GL painting.
+class GoPaintedValue : public QQuickFramebufferObject
 {
     Q_OBJECT
 
@@ -45,7 +48,7 @@ public:
 
     void activate(int propIndex);
 
-    virtual void paint(QPainter *painter);
+    virtual Renderer *createRenderer() const;
 
 private:
     GoValueMetaObject *valueMeta;

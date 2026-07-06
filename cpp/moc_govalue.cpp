@@ -1,69 +1,73 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'govalue.h'
 **
-** Created by: The Qt Meta Object Compiler version 67 (Qt 5.2.1)
+** Created by: The Qt Meta Object Compiler version 69 (Qt 6.11.1)
 **
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
 
 #include "govalue.h"
-#include <QtCore/qbytearray.h>
 #include <QtCore/qmetatype.h>
+
+#include <QtCore/qtmochelpers.h>
+
+#include <memory>
+
+
+#include <QtCore/qxptype_traits.h>
 #if !defined(Q_MOC_OUTPUT_REVISION)
 #error "The header file 'govalue.h' doesn't include <QObject>."
-#elif Q_MOC_OUTPUT_REVISION != 67
-#error "This file was generated using the moc from 5.2.1. It"
+#elif Q_MOC_OUTPUT_REVISION != 69
+#error "This file was generated using the moc from 6.11.1. It"
 #error "cannot be used with the include files from this version of Qt."
 #error "(The moc has changed too much.)"
 #endif
 
-QT_BEGIN_MOC_NAMESPACE
-struct qt_meta_stringdata_GoValue_t {
-    QByteArrayData data[1];
-    char stringdata[9];
-};
-#define QT_MOC_LITERAL(idx, ofs, len) \
-    Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
-    offsetof(qt_meta_stringdata_GoValue_t, stringdata) + ofs \
-        - idx * sizeof(QByteArrayData) \
-    )
-static const qt_meta_stringdata_GoValue_t qt_meta_stringdata_GoValue = {
-    {
-QT_MOC_LITERAL(0, 0, 7)
-    },
-    "GoValue\0"
-};
-#undef QT_MOC_LITERAL
+#ifndef Q_CONSTINIT
+#define Q_CONSTINIT
+#endif
 
-static const uint qt_meta_data_GoValue[] = {
+QT_WARNING_PUSH
+QT_WARNING_DISABLE_DEPRECATED
+QT_WARNING_DISABLE_GCC("-Wuseless-cast")
+namespace {
+struct qt_meta_tag_ZN7GoValueE_t {};
+} // unnamed namespace
 
- // content:
-       7,       // revision
-       0,       // classname
-       0,    0, // classinfo
-       0,    0, // methods
-       0,    0, // properties
-       0,    0, // enums/sets
-       0,    0, // constructors
-       0,       // flags
-       0,       // signalCount
+template <> constexpr inline auto GoValue::qt_create_metaobjectdata<qt_meta_tag_ZN7GoValueE_t>()
+{
+    namespace QMC = QtMocConstants;
+    QtMocHelpers::StringRefStorage qt_stringData {
+        "GoValue"
+    };
 
-       0        // eod
-};
+    QtMocHelpers::UintData qt_methods {
+    };
+    QtMocHelpers::UintData qt_properties {
+    };
+    QtMocHelpers::UintData qt_enums {
+    };
+    return QtMocHelpers::metaObjectData<GoValue, qt_meta_tag_ZN7GoValueE_t>(QMC::MetaObjectFlag{}, qt_stringData,
+            qt_methods, qt_properties, qt_enums);
+}
+Q_CONSTINIT const QMetaObject GoValue::staticMetaObject = { {
+    QMetaObject::SuperData::link<QObject::staticMetaObject>(),
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN7GoValueE_t>.stringdata,
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN7GoValueE_t>.data,
+    qt_static_metacall,
+    nullptr,
+    qt_staticMetaObjectRelocatingContent<qt_meta_tag_ZN7GoValueE_t>.metaTypes,
+    nullptr
+} };
 
 void GoValue::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
-    Q_UNUSED(_o);
-    Q_UNUSED(_id);
-    Q_UNUSED(_c);
-    Q_UNUSED(_a);
+    auto *_t = static_cast<GoValue *>(_o);
+    (void)_t;
+    (void)_c;
+    (void)_id;
+    (void)_a;
 }
-
-const QMetaObject GoValue::staticMetaObject = {
-    { &QObject::staticMetaObject, qt_meta_stringdata_GoValue.data,
-      qt_meta_data_GoValue,  qt_static_metacall, 0, 0}
-};
-
 
 const QMetaObject *GoValue::metaObject() const
 {
@@ -72,65 +76,55 @@ const QMetaObject *GoValue::metaObject() const
 
 void *GoValue::qt_metacast(const char *_clname)
 {
-    if (!_clname) return 0;
-    if (!strcmp(_clname, qt_meta_stringdata_GoValue.stringdata))
-        return static_cast<void*>(const_cast< GoValue*>(this));
+    if (!_clname) return nullptr;
+    if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN7GoValueE_t>.strings))
+        return static_cast<void*>(this);
     return QObject::qt_metacast(_clname);
 }
 
 int GoValue::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
     _id = QObject::qt_metacall(_c, _id, _a);
-    if (_id < 0)
-        return _id;
     return _id;
 }
-struct qt_meta_stringdata_GoPaintedValue_t {
-    QByteArrayData data[1];
-    char stringdata[16];
-};
-#define QT_MOC_LITERAL(idx, ofs, len) \
-    Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
-    offsetof(qt_meta_stringdata_GoPaintedValue_t, stringdata) + ofs \
-        - idx * sizeof(QByteArrayData) \
-    )
-static const qt_meta_stringdata_GoPaintedValue_t qt_meta_stringdata_GoPaintedValue = {
-    {
-QT_MOC_LITERAL(0, 0, 14)
-    },
-    "GoPaintedValue\0"
-};
-#undef QT_MOC_LITERAL
+namespace {
+struct qt_meta_tag_ZN14GoPaintedValueE_t {};
+} // unnamed namespace
 
-static const uint qt_meta_data_GoPaintedValue[] = {
+template <> constexpr inline auto GoPaintedValue::qt_create_metaobjectdata<qt_meta_tag_ZN14GoPaintedValueE_t>()
+{
+    namespace QMC = QtMocConstants;
+    QtMocHelpers::StringRefStorage qt_stringData {
+        "GoPaintedValue"
+    };
 
- // content:
-       7,       // revision
-       0,       // classname
-       0,    0, // classinfo
-       0,    0, // methods
-       0,    0, // properties
-       0,    0, // enums/sets
-       0,    0, // constructors
-       0,       // flags
-       0,       // signalCount
-
-       0        // eod
-};
+    QtMocHelpers::UintData qt_methods {
+    };
+    QtMocHelpers::UintData qt_properties {
+    };
+    QtMocHelpers::UintData qt_enums {
+    };
+    return QtMocHelpers::metaObjectData<GoPaintedValue, qt_meta_tag_ZN14GoPaintedValueE_t>(QMC::MetaObjectFlag{}, qt_stringData,
+            qt_methods, qt_properties, qt_enums);
+}
+Q_CONSTINIT const QMetaObject GoPaintedValue::staticMetaObject = { {
+    QMetaObject::SuperData::link<QQuickFramebufferObject::staticMetaObject>(),
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN14GoPaintedValueE_t>.stringdata,
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN14GoPaintedValueE_t>.data,
+    qt_static_metacall,
+    nullptr,
+    qt_staticMetaObjectRelocatingContent<qt_meta_tag_ZN14GoPaintedValueE_t>.metaTypes,
+    nullptr
+} };
 
 void GoPaintedValue::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
-    Q_UNUSED(_o);
-    Q_UNUSED(_id);
-    Q_UNUSED(_c);
-    Q_UNUSED(_a);
+    auto *_t = static_cast<GoPaintedValue *>(_o);
+    (void)_t;
+    (void)_c;
+    (void)_id;
+    (void)_a;
 }
-
-const QMetaObject GoPaintedValue::staticMetaObject = {
-    { &QQuickPaintedItem::staticMetaObject, qt_meta_stringdata_GoPaintedValue.data,
-      qt_meta_data_GoPaintedValue,  qt_static_metacall, 0, 0}
-};
-
 
 const QMetaObject *GoPaintedValue::metaObject() const
 {
@@ -139,17 +133,15 @@ const QMetaObject *GoPaintedValue::metaObject() const
 
 void *GoPaintedValue::qt_metacast(const char *_clname)
 {
-    if (!_clname) return 0;
-    if (!strcmp(_clname, qt_meta_stringdata_GoPaintedValue.stringdata))
-        return static_cast<void*>(const_cast< GoPaintedValue*>(this));
-    return QQuickPaintedItem::qt_metacast(_clname);
+    if (!_clname) return nullptr;
+    if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN14GoPaintedValueE_t>.strings))
+        return static_cast<void*>(this);
+    return QQuickFramebufferObject::qt_metacast(_clname);
 }
 
 int GoPaintedValue::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
-    _id = QQuickPaintedItem::qt_metacall(_c, _id, _a);
-    if (_id < 0)
-        return _id;
+    _id = QQuickFramebufferObject::qt_metacall(_c, _id, _a);
     return _id;
 }
-QT_END_MOC_NAMESPACE
+QT_WARNING_POP

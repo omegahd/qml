@@ -171,6 +171,49 @@ func (e *Engine) LoadString(location, qml string) (Object, error) {
 	return e.Load(location, strings.NewReader(qml))
 }
 
+// AddImportPath adds path to the list of directories the engine searches
+// for installed QML modules, ahead of the default import paths. A module
+// found under path may be a plain QML directory with a qmldir file, or a
+// QML extension plugin.
+func (e *Engine) AddImportPath(path string) {
+	e.assertValid()
+	cpath, cpathlen := unsafeStringData(path)
+	RunMain(func() {
+		C.engineAddImportPath(e.addr, cpath, cpathlen)
+	})
+}
+
+// ClearImportPaths clears the engine's list of QML module import paths,
+// including the default ones. Most applications will only ever need
+// AddImportPath instead.
+func (e *Engine) ClearImportPaths() {
+	e.assertValid()
+	RunMain(func() {
+		C.engineClearImportPaths(e.addr)
+	})
+}
+
+// AddPluginPath adds path to the list of directories the engine searches
+// for native plugins referenced with a relative path from a qmldir file,
+// ahead of the default plugin paths.
+func (e *Engine) AddPluginPath(path string) {
+	e.assertValid()
+	cpath, cpathlen := unsafeStringData(path)
+	RunMain(func() {
+		C.engineAddPluginPath(e.addr, cpath, cpathlen)
+	})
+}
+
+// ClearPluginPaths clears the engine's list of plugin search paths,
+// including the default ones. Most applications will only ever need
+// AddPluginPath instead.
+func (e *Engine) ClearPluginPaths() {
+	e.assertValid()
+	RunMain(func() {
+		C.engineClearPluginPaths(e.addr)
+	})
+}
+
 // Context returns the engine's root context.
 func (e *Engine) Context() *Context {
 	e.assertValid()
@@ -1086,11 +1129,36 @@ func RegisterConverter(typeName string, converter func(engine *Engine, obj Objec
 
 var converters = make(map[string]func(engine *Engine, obj Object) interface{})
 
+// loadedResources pins registered resource data so that the garbage
+// collector cannot free memory that Qt's resource registry still points to.
+// Qt 6 walks all registered resource trees when an engine is created, which
+// crashes on unpinned data that was collected meanwhile.
+var (
+	loadedResourcesMutex sync.Mutex
+	loadedResources      = make(map[*Resources]int)
+)
+
+// SetWindowIcon sets the default icon of all application windows.
+// The path may be a plain file path, or a resource path such as
+// ":path/icon.ico" once the containing resources have been loaded.
+func SetWindowIcon(path string) {
+	cpath, cpathlen := unsafeStringData(path)
+	RunMain(func() {
+		qpath := C.newString(cpath, cpathlen)
+		defer C.delString(qpath)
+		C.setWindowIcon(qpath)
+	})
+}
+
 // LoadResources registers all resources in the provided resources collection,
 // making them available to be loaded by any Engine and QML file.
 // Registered resources are made available under "qrc:///some/path", where
 // "some/path" is the path the resource was added with.
 func LoadResources(r *Resources) {
+	loadedResourcesMutex.Lock()
+	loadedResources[r]++
+	loadedResourcesMutex.Unlock()
+
 	var base unsafe.Pointer
 	if len(r.sdata) > 0 {
 		base = *(*unsafe.Pointer)(unsafe.Pointer(&r.sdata))
@@ -1105,6 +1173,13 @@ func LoadResources(r *Resources) {
 
 // UnloadResources unregisters all previously registered resources from r.
 func UnloadResources(r *Resources) {
+	loadedResourcesMutex.Lock()
+	if n := loadedResources[r]; n > 1 {
+		loadedResources[r] = n - 1
+	} else {
+		delete(loadedResources, r)
+	}
+	loadedResourcesMutex.Unlock()
 	var base unsafe.Pointer
 	if len(r.sdata) > 0 {
 		base = *(*unsafe.Pointer)(unsafe.Pointer(&r.sdata))

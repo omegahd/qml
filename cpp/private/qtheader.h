@@ -9,7 +9,9 @@
 
 #if QT_MAJOR_ == 5
 #define QT_MAJOR 5
-#else 
+#elif QT_MAJOR_ == 6
+#define QT_MAJOR 6
+#else
 #error Unupported Qt major version. Please report.
 #endif
 
@@ -51,7 +53,11 @@
 #define QT_MINOR 17
 #elif QT_MINOR_ == 18
 #define QT_MINOR 18
-#else 
+#elif QT_MINOR_ == 19
+#define QT_MINOR 19
+#elif QT_MINOR_ == 20
+#define QT_MINOR 20
+#else
 #error Unupported Qt minor version. Please report.
 #endif
 
@@ -77,7 +83,27 @@
 #define QT_MICRO 9
 #elif QT_MICRO_ == 10
 #define QT_MICRO 10
-#else 
+#elif QT_MICRO_ == 11
+#define QT_MICRO 11
+#elif QT_MICRO_ == 12
+#define QT_MICRO 12
+#elif QT_MICRO_ == 13
+#define QT_MICRO 13
+#elif QT_MICRO_ == 14
+#define QT_MICRO 14
+#elif QT_MICRO_ == 15
+#define QT_MICRO 15
+#elif QT_MICRO_ == 16
+#define QT_MICRO 16
+#elif QT_MICRO_ == 17
+#define QT_MICRO 17
+#elif QT_MICRO_ == 18
+#define QT_MICRO 18
+#elif QT_MICRO_ == 19
+#define QT_MICRO 19
+#elif QT_MICRO_ == 20
+#define QT_MICRO 20
+#else
 #error Unupported Qt micro version. Please report.
 #endif
 

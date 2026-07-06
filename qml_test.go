@@ -22,7 +22,24 @@ import (
 	"path/filepath"
 )
 
-func init() { qml.SetupTesting() }
+// The test main runs inside qml.Run so that the Qt event loop owns the
+// main thread. This replaces the code-patching qml.SetupTesting hack,
+// which stopped working when the Go runtime switched to calling
+// main.main indirectly.
+func TestMain(m *testing.M) {
+	code := 0
+	err := qml.Run(func() error {
+		code = m.Run()
+		return nil
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		if code == 0 {
+			code = 1
+		}
+	}
+	os.Exit(code)
+}
 
 func Test(t *testing.T) { TestingT(t) }
 
@@ -140,6 +157,10 @@ func (ts *GoType) StringMethod() string {
 	return ts.StringValue
 }
 
+func (ts *GoType) IntsMethod() []int {
+	return ts.IntsValue
+}
+
 func (ts *GoType) SetSetterStringValue(s string) {
 	ts.setterStringValueChanged++
 	ts.setterStringValueSet = s
@@ -224,6 +245,26 @@ func (s *S) TestContextGetMissing(c *C) {
 	c.Assert(s.context.Var("missing"), Equals, nil)
 }
 
+func (s *S) TestEngineAddImportPath(c *C) {
+	dir := c.MkDir()
+	moddir := filepath.Join(dir, "TestModule")
+	err := os.Mkdir(moddir, 0755)
+	c.Assert(err, IsNil)
+	err = ioutil.WriteFile(filepath.Join(moddir, "qmldir"), []byte("module TestModule\nTestItem 1.0 TestItem.qml\n"), 0644)
+	c.Assert(err, IsNil)
+	err = ioutil.WriteFile(filepath.Join(moddir, "TestItem.qml"), []byte("import QtQuick 2.0\nItem { property string hello: \"world\" }\n"), 0644)
+	c.Assert(err, IsNil)
+
+	s.engine.AddImportPath(dir)
+	s.engine.AddPluginPath(dir) // No plugins there; just ensure it does not break anything.
+
+	component, err := s.engine.LoadString("file.qml", "import TestModule 1.0\nTestItem {}\n")
+	c.Assert(err, IsNil)
+	root := component.Create(nil)
+	defer root.Destroy()
+	c.Assert(root.String("hello"), Equals, "world")
+}
+
 func (s *S) TestContextSetVars(c *C) {
 	component, err := s.engine.LoadString("file.qml", "import QtQuick 2.0\nItem { width: 42 }")
 	c.Assert(err, IsNil)
@@ -259,7 +300,8 @@ func (s *S) TestContextSetVars(c *C) {
 
 func (s *S) TestComponentSetDataError(c *C) {
 	_, err := s.engine.LoadString("file.qml", "Item{}")
-	c.Assert(err, ErrorMatches, "file:.*/file.qml:1 Item is not a type")
+	// Qt 6 appends the column to the location ("file.qml:1:1:").
+	c.Assert(err, ErrorMatches, "file:.*/file.qml:1(:[0-9]+:)? Item is not a type")
 }
 
 func (s *S) TestComponentCreateWindow(c *C) {
@@ -401,7 +443,8 @@ func testResourcesLoaded(c *C, loaded bool) {
 	if loaded {
 		c.Assert(err, IsNil)
 	} else {
-		c.Assert(err, ErrorMatches, "qrc:///sub/Main.qml:-1 File not found")
+		// Qt 6 reports "qrc:/sub/Main.qml: No such file or directory".
+		c.Assert(err, ErrorMatches, "qrc:(//)?/sub/Main.qml(:-1)?:? (File not found|No such file or directory)")
 		return
 	}
 	root := component.Create(nil)
@@ -557,13 +600,14 @@ var tests = []struct {
 		DoneLog: "String is <content>.*Width is 300.*Height is 200",
 	},
 	{
+		// QtWebKit no longer exists; Image.source is a QUrl property too.
 		Summary: "Read and set a QUrl property",
-		QML:     `import QtWebKit 3.0; WebView {}`,
+		QML:     `Image {}`,
 		Done: func(c *TestData) {
-			c.Check(c.root.String("url"), Equals, "")
+			c.Check(c.root.String("source"), Equals, "")
 			url := "http://localhost:54321"
-			c.root.Set("url", url)
-			c.Check(c.root.String("url"), Equals, url)
+			c.root.Set("source", url)
+			c.Check(c.root.String("source"), Equals, url)
 		},
 	},
 	{
@@ -581,6 +625,31 @@ var tests = []struct {
 		QML:     `Text{ property var c: value.colorValue; Component.onCompleted: { console.log(value.colorValue); } }`,
 		Done: func(c *TestData) {
 			c.Assert(c.root.Color("c"), Equals, color.RGBA{256 / 16, 256 / 8, 256 / 4, 256 / 2})
+		},
+	},
+	{
+		Summary: "Read and set date, rect, point, size and byte array properties",
+		QML: `
+			Item {
+				property date datep: new Date(2024, 0, 2, 3, 4, 5)
+				property rect rectp: Qt.rect(10, 20, 30, 40)
+				property point pointp: Qt.point(1.5, 2.5)
+				property size sizep: Qt.size(3.5, 4.5)
+				property var bytesp
+			}
+		`,
+		Done: func(c *TestData) {
+			c.Check(c.root.Property("datep").(time.Time).Equal(time.Date(2024, 1, 2, 3, 4, 5, 0, time.Local)), Equals, true)
+			c.Check(c.root.Property("rectp"), Equals, qml.Rect{X: 10, Y: 20, Width: 30, Height: 40})
+			c.Check(c.root.Property("pointp"), Equals, qml.Point{X: 1.5, Y: 2.5})
+			c.Check(c.root.Property("sizep"), Equals, qml.Size{Width: 3.5, Height: 4.5})
+
+			c.root.Set("rectp", qml.Rect{X: 1, Y: 2, Width: 3, Height: 4})
+			c.Check(c.root.Property("rectp"), Equals, qml.Rect{X: 1, Y: 2, Width: 3, Height: 4})
+			c.root.Set("datep", time.Unix(123, 456000000))
+			c.Check(c.root.Property("datep").(time.Time).UnixMilli(), Equals, int64(123456))
+			c.root.Set("bytesp", []byte{0, 1, 2})
+			c.Check(c.root.Property("bytesp"), DeepEquals, []byte{0, 1, 2})
 		},
 	},
 	{
@@ -658,6 +727,46 @@ var tests = []struct {
 			c.Assert(c.value.ObjectsValue[1].String("name"), Equals, "off")
 			c.Assert(len(c.value.ObjectsValue), Equals, 2)
 		},
+	},
+	{
+		Summary: "Read a Go slice property as a JS array",
+		Value:   GoType{IntsValue: []int{10, 20, 30}},
+		QML: `Item {
+			Component.onCompleted: {
+				var l = value.intsValue
+				console.log("Ints are", l.length, l[0], l[1], l[2])
+			}
+		}`,
+		QMLLog: "Ints are 3 10 20 30",
+	},
+	{
+		Summary: "Read a nested Go slice as nested JS arrays",
+		Value:   GoType{AnyValue: []interface{}{1, "two", []string{"a", "b"}}},
+		QML:     `Item { Component.onCompleted: console.log("Nested is", value.anyValue[0], value.anyValue[1], value.anyValue[2][1]) }`,
+		QMLLog:  "Nested is 1 two b",
+	},
+	{
+		Summary: "Call a Go method returning a slice",
+		Value:   GoType{IntsValue: []int{1, 2}},
+		QML: `Item {
+			Component.onCompleted: {
+				var l = value.intsMethod()
+				console.log("Got", l.length, l[0]+l[1])
+			}
+		}`,
+		QMLLog: "Got 2 3",
+	},
+	{
+		Summary: "Read a Go rect field as a native QML rect",
+		Value:   GoType{AnyValue: qml.Rect{X: 1, Y: 2, Width: 3, Height: 4}},
+		QML:     `Item { Component.onCompleted: console.log("Rect is", value.anyValue.x, value.anyValue.y, value.anyValue.width, value.anyValue.height) }`,
+		QMLLog:  "Rect is 1 2 3 4",
+	},
+	{
+		Summary: "Read a Go time field as a native QML date",
+		Value:   GoType{AnyValue: time.Date(2024, 5, 4, 12, 0, 0, 0, time.Local)},
+		QML:     `Item { Component.onCompleted: console.log("Year is", value.anyValue.getFullYear()) }`,
+		QMLLog:  "Year is 2024",
 	},
 	{
 		Summary:  "Call a method with a JSON object (issue #48)",
@@ -1020,6 +1129,11 @@ var tests = []struct {
 			c.Check(qml.Stats().ValuesAlive, Equals, stats.ValuesAlive+1)
 			c.root.Call("log")
 			c.root.Call("hold", nil)
+			// Qt 6 destroys collected wrappers via deferred deletion,
+			// so wait for the event loop to settle.
+			for i := 0; i < 30 && qml.Stats().ValuesAlive > stats.ValuesAlive; i++ {
+				time.Sleep(100 * time.Millisecond)
+			}
 			c.Check(qml.Stats().ValuesAlive, Equals, stats.ValuesAlive)
 		},
 		DoneLog: "String is <content>",
@@ -1149,17 +1263,22 @@ var tests = []struct {
 		},
 	},
 	{
+		// QtWebKit no longer exists; a custom typed signal exercises the
+		// same object-parameter delivery through the connector.
 		Summary: "Connect to a QML signal with an object parameter",
-		QML:     `import QtWebKit 3.0; WebView{}`,
+		QML: `
+			Item {
+				id: self
+				signal notify(Item obj)
+				property var child: Rectangle { objectName: "kid" }
+				function fire() { self.notify(child) }
+			}
+		`,
 		Done: func(c *TestData) {
-			url := "http://localhost:54321/"
-			done := make(chan bool)
-			c.root.On("navigationRequested", func(request qml.Object) {
-				c.Check(request.String("url"), Equals, url)
-				done <- true
-			})
-			c.root.Set("url", url)
-			<-done
+			var name string
+			c.root.On("notify", func(obj qml.Object) { name = obj.String("objectName") })
+			c.root.Call("fire")
+			c.Check(name, Equals, "kid")
 		},
 	},
 	{
@@ -1200,8 +1319,11 @@ var tests = []struct {
 			defer window.Destroy()
 			window.Show()
 
-			// Qt doesn't hide the Window if we call it too quickly. :-(
-			time.Sleep(100 * time.Millisecond)
+			// Qt 6 finishes instantiating and painting the content
+			// asynchronously in the event loop after Show.
+			for i := 0; i < 30 && (len(c.createdRect) == 0 || c.createdRect[0].PaintCount == 0); i++ {
+				time.Sleep(100 * time.Millisecond)
+			}
 
 			c.Assert(c.createdRect, HasLen, 1)
 			c.Assert(c.createdRect[0].PaintCount, Equals, 1)

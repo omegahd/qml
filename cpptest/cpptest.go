@@ -1,10 +1,10 @@
 // Package cpptest is an internal test helper.
 package cpptest
 
-// #cgo CXXFLAGS: -std=c++0x -Wall -fno-strict-aliasing -I..
+// #cgo CXXFLAGS: -std=c++17 -Wall -fno-strict-aliasing -I..
 // #cgo LDFLAGS: -lstdc++
 //
-// #cgo pkg-config: Qt5Core
+// #cgo pkg-config: Qt6Core
 //
 // #include "cpptest.h"
 //
