@@ -182,6 +182,30 @@ func packDataValue(value interface{}, dvalue *C.DataValue, engine *Engine, owner
 			*(*unsafe.Pointer)(datap) = listp
 			return
 		}
+		if v := reflect.ValueOf(value); v.Kind() == reflect.Map && v.Type().Key().Kind() == reflect.String {
+			// Maps with string keys become a QVariantMap, which QML
+			// sees as a JS object, with values packed recursively.
+			// The C++ side copies all the data during the call below.
+			n := v.Len()
+			var mapp unsafe.Pointer
+			if n == 0 {
+				mapp = unsafe.Pointer(C.newVariantMap(nil, 0))
+			} else {
+				dvs := make([]C.DataValue, 2*n)
+				i := 0
+				for it := v.MapRange(); it.Next(); {
+					packDataValue(it.Key().String(), &dvs[2*i], engine, owner)
+					packDataValue(it.Value().Interface(), &dvs[2*i+1], engine, owner)
+					i++
+				}
+				mapp = unsafe.Pointer(C.newVariantMap(&dvs[0], C.int(2*n)))
+			}
+			// The entries above may reference Go memory owned by value.
+			runtime.KeepAlive(value)
+			dvalue.dataType = C.DTVariantMap
+			*(*unsafe.Pointer)(datap) = mapp
+			return
+		}
 		dvalue.dataType = C.DTObject
 		*(*unsafe.Pointer)(datap) = wrapGoValue(engine, value, owner)
 	}

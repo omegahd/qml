@@ -37,8 +37,9 @@ What changed in the Qt 6 port
     `QQuickFramebufferObject`, as `QQuickPaintedItem` is raster-only in Qt 6.
   * More Go/QML value conversions: `time.Time` ↔ QML `date`, `[]byte` ↔
     `QByteArray`, `qml.Rect`/`qml.Point`/`qml.Size` ↔ QML `rect`/`point`/`size`,
-    and arbitrary Go slices and arrays are now delivered to QML as real JS
-    arrays (recursively), instead of opaque wrappers.
+    arbitrary Go slices and arrays are now delivered to QML as real JS
+    arrays, and Go maps with string keys as JS objects (both recursively),
+    instead of opaque wrappers.
   * New API: `SetWindowIcon`, and `Engine.AddImportPath`/`AddPluginPath`
     (plus `Clear*` variants) for loading external QML modules and plugins
     from custom locations.

@@ -769,6 +769,17 @@ var tests = []struct {
 		QMLLog:  "Year is 2024",
 	},
 	{
+		Summary: "Read a Go map property as a JS object",
+		Value:   GoType{MapValue: map[string]interface{}{"a": 1, "s": "two", "l": []int{3, 4}}},
+		QML: `Item {
+			Component.onCompleted: {
+				var m = value.mapValue
+				console.log("Map is", m.a, m.s, m.l[1], Object.keys(m).length)
+			}
+		}`,
+		QMLLog: "Map is 1 two 4 3",
+	},
+	{
 		Summary:  "Call a method with a JSON object (issue #48)",
 		QML:      `Item { Component.onCompleted: value.setMapValue({a: 1, b: 2}) }`,
 		QMLValue: GoType{MapValue: map[string]interface{}{"a": 1, "b": 2}},

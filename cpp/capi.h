@@ -18,6 +18,7 @@ typedef void QMetaObject_;
 typedef void QObject_;
 typedef void QVariant_;
 typedef void QVariantList_;
+typedef void QVariantMap_;
 typedef void QString_;
 typedef void QQmlEngine_;
 typedef void QQmlContext_;
@@ -62,6 +63,7 @@ typedef enum {
     DTValueList    = 103,
     DTVariantList  = 104,
     DTListProperty = 105,
+    DTVariantMap   = 106,
 
     // Used in type information, not in an actual data value.
     DTAny     = 201, // Can hold any of the above types.
@@ -187,6 +189,7 @@ void packDataValue(QVariant_ *var, DataValue *result);
 void unpackDataValue(DataValue *value, QVariant_ *result);
 
 QVariantList_ *newVariantList(DataValue *list, int len);
+QVariantMap_ *newVariantMap(DataValue *pairs, int len);
 
 QQmlListProperty_ *newListProperty(GoRef ref, intptr_t reflectIndex, intptr_t setIndex);
 

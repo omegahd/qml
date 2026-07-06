@@ -741,6 +741,10 @@ void unpackDataValue(DataValue *value, QVariant_ *var)
         *qvar = **(QVariantList**)(value->data);
         delete *(QVariantList**)(value->data);
         break;
+    case DTVariantMap:
+        *qvar = **(QVariantMap**)(value->data);
+        delete *(QVariantMap**)(value->data);
+        break;
     case DTObject:
         qvar->setValue(*(QObject**)(value->data));
         break;
@@ -990,6 +994,18 @@ QVariantList_ *newVariantList(DataValue *list, int len)
         vlist->append(var);
     }
     return vlist;
+}
+
+QVariantMap_ *newVariantMap(DataValue *pairs, int len)
+{
+    QVariantMap *vmap = new QVariantMap();
+    for (int i = 0; i < len; i += 2) {
+        QVariant key, var;
+        unpackDataValue(&pairs[i], &key);
+        unpackDataValue(&pairs[i+1], &var);
+        vmap->insert(key.toString(), var);
+    }
+    return vmap;
 }
 
 // Qt 6 dropped the spare dummy1/dummy2 fields that were used to carry the
