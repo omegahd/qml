@@ -59,8 +59,7 @@ Installation
 
 Requirements:
 
-  * Go (the package is developed in GOPATH mode; there is intentionally no
-    go.mod — build with `GO111MODULE=off`)
+  * Go >= 1.18
   * A Qt 6 installation with development files, **including the private
     headers** (the default Qt online installer layout includes them; on Linux
     distributions they typically come from a `qt6-base-private-dev` or
@@ -69,11 +68,12 @@ Requirements:
     offered by the Qt installer)
   * `pkg-config`, with `PKG_CONFIG_PATH` pointing at Qt's `lib/pkgconfig`
 
-Fetch the package into your GOPATH:
+Add the package to your module:
 
-    GO111MODULE=off go get github.com/omegahd/qml
+    go get github.com/omegahd/qml
 
-then set up the build environment as described below and build.
+then set up the build environment as described below and build. Building in
+GOPATH mode (`GO111MODULE=off`) also still works.
 
 
 Building against Qt 6
