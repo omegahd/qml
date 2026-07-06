@@ -136,10 +136,3 @@ These introductory videos demonstrate the use of Go QML:
   * [Spinning Gopher with Go + QML + OpenGL](http://youtu.be/qkH7_dtOyPk)
   * [SameGame QML tutorial in Go](http://youtu.be/z8noX48hiMI)
 
-
-Community
----------
-
-The original project's [mailing list](https://groups.google.com/forum/#!forum/go-qml)
-holds historical development discussion. For issues with this fork, please use
-the GitHub issue tracker of this repository.
