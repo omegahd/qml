@@ -42,9 +42,8 @@
 
 
 
-import QtQuick 2.2
-import QtQuick.Controls 1.1
-import QtQuick.Layouts 1.0
+import QtQuick
+import QtQuick.Controls
 
 ApplicationWindow {
     visible: true
@@ -56,25 +55,26 @@ ApplicationWindow {
 
         Rectangle {
             id: column
-            width: 200
-            Layout.minimumWidth: 100
-            Layout.maximumWidth: 300
+            SplitView.preferredWidth: 200
+            SplitView.minimumWidth: 100
+            SplitView.maximumWidth: 300
             color: "lightsteelblue"
         }
 
         SplitView {
             orientation: Qt.Vertical
-            Layout.fillWidth: true
+            SplitView.fillWidth: true
 
             Rectangle {
                 id: row1
-                height: 200
+                SplitView.preferredHeight: 200
+                SplitView.minimumHeight: 1
                 color: "lightblue"
-                Layout.minimumHeight: 1
             }
 
             Rectangle {
                 id: row2
+                SplitView.fillHeight: true
                 color: "lightgray"
             }
         }

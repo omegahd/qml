@@ -42,7 +42,7 @@
 
 
 
-import QtQuick 2.2
+import QtQuick
 
 Item {
     id: root
@@ -62,7 +62,7 @@ Item {
         id: textitem
         color: "white"
         font.pixelSize: 32
-        text: modelData
+
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
         anchors.leftMargin: 30

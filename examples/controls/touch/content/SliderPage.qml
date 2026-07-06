@@ -38,69 +38,48 @@
 **
 ****************************************************************************/
 
-
-
-
-
-import QtQuick 2.2
-import QtQuick.Controls 1.1
-import QtQuick.Controls.Styles 1.1
+import QtQuick
+import QtQuick.Controls.Basic
 
 Item {
     width: parent.width
     height: parent.height
 
+    component TouchSlider: Slider {
+        id: control
+        implicitWidth: 400
+        implicitHeight: 50
+        background: Rectangle {
+            y: (control.height - height) / 2
+            width: control.availableWidth
+            height: 8
+            color: "#444"
+            opacity: 0.8
+            Rectangle {
+                antialiasing: true
+                radius: 1
+                color: "#468bb7"
+                height: parent.height
+                width: control.visualPosition * parent.width
+            }
+        }
+        handle: Rectangle {
+            x: control.leftPadding + control.visualPosition * (control.availableWidth - width)
+            y: (control.height - height) / 2
+            width: 30
+            height: 30
+            radius: height
+            antialiasing: true
+            color: Qt.lighter("#468bb7", 1.1)
+        }
+    }
+
     Column {
         spacing: 12
         anchors.centerIn: parent
 
-        Slider {
-            anchors.margins: 20
-            style: touchStyle
-            value: 0
-        }
-        Slider {
-            anchors.margins: 20
-            style: touchStyle
-            value: 0.5
-        }
-        Slider {
-            anchors.margins: 20
-            style: touchStyle
-            value: 1.0
-        }
-
-    }
-
-    Component {
-        id: touchStyle
-        SliderStyle {
-            handle: Rectangle {
-                width: 30
-                height: 30
-                radius: height
-                antialiasing: true
-                color: Qt.lighter("#468bb7", 1.1)
-            }
-
-            groove: Item {
-                implicitHeight: 50
-                implicitWidth: 400
-                Rectangle {
-                    height: 8
-                    width: parent.width
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: "#444"
-                    opacity: 0.8
-                    Rectangle {
-                        antialiasing: true
-                        radius: 1
-                        color: "#468bb7"
-                        height: parent.height
-                        width: parent.width * control.value / control.maximumValue
-                    }
-                }
-            }
-        }
+        TouchSlider { value: 0 }
+        TouchSlider { value: 0.5 }
+        TouchSlider { value: 1.0 }
     }
 }

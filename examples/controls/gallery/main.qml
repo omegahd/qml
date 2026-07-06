@@ -38,14 +38,10 @@
 **
 ****************************************************************************/
 
-
-
-
-
-import QtQuick 2.2
-import QtQuick.Controls 1.1
-import QtQuick.Layouts 1.0
-import QtQuick.Dialogs 1.0
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtQuick.Dialogs
 import "content"
 
 ApplicationWindow {
@@ -57,18 +53,12 @@ ApplicationWindow {
     minimumHeight: 400
     minimumWidth: 600
 
-    property string loremIpsum:
-            "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor "+
-            "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor "+
-            "incididunt ut labore et dolore magna aliqua.\n Ut enim ad minim veniam, quis nostrud "+
-            "exercitation ullamco laboris nisi ut aliquip ex ea commodo cosnsequat. ";
-
     ImageViewer { id: imageViewer }
 
     FileDialog {
         id: fileDialog
         nameFilters: [ "Image files (*.png *.jpg)" ]
-        onAccepted: imageViewer.open(fileUrl)
+        onAccepted: imageViewer.open(selectedFile)
     }
 
     AboutDialog { id: aboutDialog }
@@ -77,16 +67,14 @@ ApplicationWindow {
         id: openAction
         text: "&Open"
         shortcut: StandardKey.Open
-        iconSource: "images/document-open.png"
+        icon.source: "images/document-open.png"
         onTriggered: fileDialog.open()
-        tooltip: "Open an image"
     }
 
     Action {
         id: copyAction
         text: "&Copy"
         shortcut: StandardKey.Copy
-        iconName: "edit-copy"
         enabled: (!!activeFocusItem && !!activeFocusItem["copy"])
         onTriggered: activeFocusItem.copy()
     }
@@ -95,7 +83,6 @@ ApplicationWindow {
         id: cutAction
         text: "Cu&t"
         shortcut: StandardKey.Cut
-        iconName: "edit-cut"
         enabled: (!!activeFocusItem && !!activeFocusItem["cut"])
         onTriggered: activeFocusItem.cut()
     }
@@ -104,7 +91,6 @@ ApplicationWindow {
         id: pasteAction
         text: "&Paste"
         shortcut: StandardKey.Paste
-        iconName: "edit-paste"
         enabled: (!!activeFocusItem && !!activeFocusItem["paste"])
         onTriggered: activeFocusItem.paste()
     }
@@ -115,14 +101,14 @@ ApplicationWindow {
         onTriggered: aboutDialog.open()
     }
 
-    ExclusiveGroup {
+    ActionGroup {
         id: textFormatGroup
 
         Action {
             id: a1
             text: "Align &Left"
             checkable: true
-            Component.onCompleted: checked = true
+            checked: true
         }
 
         Action {
@@ -140,45 +126,28 @@ ApplicationWindow {
 
     ChildWindow { id: window1 }
 
-    Menu {
-        id: editmenu
-        MenuItem { action: cutAction }
-        MenuItem { action: copyAction }
-        MenuItem { action: pasteAction }
-        MenuSeparator {}
-        Menu {
-            title: "Text &Format"
-            MenuItem { action: a1 }
-            MenuItem { action: a2 }
-            MenuItem { action: a3 }
-            MenuSeparator { }
-            MenuItem { text: "Allow &Hyphenation"; checkable: true }
-        }
-        Menu {
-            title: "Font &Style"
-            MenuItem { text: "&Bold"; checkable: true }
-            MenuItem { text: "&Italic"; checkable: true }
-            MenuItem { text: "&Underline"; checkable: true }
-        }
-    }
-
-    toolBar: ToolBar {
-        id: toolbar
+    header: ToolBar {
         RowLayout {
-            id: toolbarLayout
+            anchors.fill: parent
             spacing: 0
-            width: parent.width
             ToolButton {
-                iconSource: "images/window-new.png"
+                icon.source: "images/window-new.png"
                 onClicked: window1.visible = !window1.visible
                 Accessible.name: "New window"
-                tooltip: "Toggle visibility of the second window"
+                ToolTip.visible: hovered
+                ToolTip.text: "Toggle visibility of the second window"
             }
-            ToolButton { action: openAction }
+            ToolButton {
+                action: openAction
+                display: AbstractButton.IconOnly
+                ToolTip.visible: hovered
+                ToolTip.text: "Open an image"
+            }
             ToolButton {
                 Accessible.name: "Save as"
-                iconSource: "images/document-save-as.png"
-                tooltip: "(Pretend to) Save as..."
+                icon.source: "images/document-save-as.png"
+                ToolTip.visible: hovered
+                ToolTip.text: "(Pretend to) Save as..."
             }
             Item { Layout.fillWidth: true }
             CheckBox {
@@ -195,7 +164,6 @@ ApplicationWindow {
             MenuItem { action: openAction }
             MenuItem {
                 text: "Close"
-                shortcut: StandardKey.Quit
                 onTriggered: Qt.quit()
             }
         }
@@ -205,19 +173,19 @@ ApplicationWindow {
             MenuItem { action: copyAction }
             MenuItem { action: pasteAction }
             MenuSeparator { }
-            MenuItem {
-                text: "Do Nothing"
-                shortcut: "Ctrl+E,Shift+Ctrl+X"
-                enabled: false
-            }
-            MenuItem {
-                text: "Not Even There"
-                shortcut: "Ctrl+E,Shift+Ctrl+Y"
-                visible: false
+            Menu {
+                title: "Text &Format"
+                MenuItem { action: a1 }
+                MenuItem { action: a2 }
+                MenuItem { action: a3 }
+                MenuSeparator { }
+                MenuItem { text: "Allow &Hyphenation"; checkable: true }
             }
             Menu {
-                title: "Me Neither"
-                visible: false
+                title: "Font &Style"
+                MenuItem { text: "&Bold"; checkable: true }
+                MenuItem { text: "&Italic"; checkable: true }
+                MenuItem { text: "&Underline"; checkable: true }
             }
         }
         Menu {
@@ -226,9 +194,9 @@ ApplicationWindow {
         }
     }
 
-
-    SystemPalette {id: syspal}
+    SystemPalette { id: syspal }
     color: syspal.window
+
     ListModel {
         id: choices
         ListElement { text: "Banana" }
@@ -237,30 +205,30 @@ ApplicationWindow {
         ListElement { text: "Coconut" }
     }
 
-    TabView {
-        id:frame
-        enabled: enabledCheck.checked
-        tabPosition: controlPage.item ? controlPage.item.tabPosition : Qt.TopEdge
+    ColumnLayout {
         anchors.fill: parent
-        anchors.margins: Qt.platform.os === "osx" ? 12 : 2
+        anchors.margins: 2
+        spacing: 0
+        enabled: enabledCheck.checked
 
-        Tab {
-            id: controlPage
-            title: "Controls"
-            Controls { }
+        TabBar {
+            id: bar
+            Layout.fillWidth: true
+            TabButton { text: "Controls" }
+            TabButton { text: "Itemviews" }
+            TabButton { text: "Styles" }
+            TabButton { text: "Layouts" }
         }
-        Tab {
-            title: "Itemviews"
-            ModelView { }
-        }
-        Tab {
-            title: "Styles"
-            Styles { anchors.fill: parent }
-        }
-        Tab {
-            title: "Layouts"
-            Layouts { anchors.fill:parent }
+
+        StackLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            currentIndex: bar.currentIndex
+
+            Item { Controls { } }
+            Item { ModelView { } }
+            Item { Styles { } }
+            Item { Layouts { } }
         }
     }
 }
-

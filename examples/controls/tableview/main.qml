@@ -38,367 +38,226 @@
 **
 ****************************************************************************/
 
+import QtQuick
+import QtQuick.Window
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtQml.XmlListModel
 
-
-
-
-import QtQuick 2.2
-import QtQuick.Window 2.1
-import QtQuick.Controls 1.1
-import QtQuick.XmlListModel 2.0
-
-Window {
+ApplicationWindow {
     visible: true
-    width: 538 + frame.margins * 2
-    height: 360 + frame.margins * 2
+    width: 570
+    height: 420
+    title: "Table views"
 
-    ToolBar {
-        id: toolbar
-        width: parent.width
-
-        ListModel {
-            id: delegatemenu
-            ListElement { text: "Shiny delegate" }
-            ListElement { text: "Scale selected" }
-            ListElement { text: "Editable items" }
-        }
-
-        ComboBox {
-            id: delegateChooser
-            enabled: frame.currentIndex === 3 ? 1 : 0
-            model: delegatemenu
-            width: 150
-            anchors.left: parent.left
+    header: ToolBar {
+        RowLayout {
+            anchors.fill: parent
             anchors.leftMargin: 8
-            anchors.verticalCenter: parent.verticalCenter
-        }
-
-        CheckBox {
-            id: enabledCheck
-            text: "Enabled"
-            checked: true
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
+            anchors.rightMargin: 8
+            TabBar {
+                id: bar
+                Layout.fillWidth: true
+                background: null
+                TabButton { text: "XmlListModel" }
+                TabButton { text: "Generated" }
+                TabButton { text: "Editable" }
+            }
+            CheckBox {
+                id: alternateCheck
+                text: "Alternate"
+                checked: true
+            }
+            CheckBox {
+                id: enabledCheck
+                text: "Enabled"
+                checked: true
+            }
         }
     }
 
-    SystemPalette {id: syspal}
+    SystemPalette { id: syspal }
     color: syspal.window
 
     XmlListModel {
-        id: flickerModel
-        source: "http://api.flickr.com/services/feeds/photos_public.gne?format=rss2&tags=" + "Qt"
+        id: feedModel
+        source: "https://api.flickr.com/services/feeds/photos_public.gne?format=rss2&tags=Qt"
         query: "/rss/channel/item"
-        namespaceDeclarations: "declare namespace media=\"http://search.yahoo.com/mrss/\";"
-        XmlRole { name: "title"; query: "title/string()" }
-        XmlRole { name: "imagesource"; query: "media:thumbnail/@url/string()" }
-        XmlRole { name: "credit"; query: "media:credit/string()" }
-    }
-
-    ListModel {
-        id: nestedModel
-        ListElement{content: ListElement { description: "Core" ; color:"#ffaacc"}}
-        ListElement{content: ListElement { description: "Second" ; color:"#ffccaa"}}
-        ListElement{content: ListElement { description: "Third" ; color:"#ffffaa"}}
+        XmlListModelRole { name: "title"; elementName: "title" }
+        XmlListModelRole { name: "pubDate"; elementName: "pubDate" }
+        XmlListModelRole { name: "link"; elementName: "link" }
     }
 
     ListModel {
         id: largeModel
         Component.onCompleted: {
-            for (var i=0 ; i< 500 ; ++i)
-                largeModel.append({"name":"Person "+i , "age": Math.round(Math.random()*100), "gender": Math.random()>0.5 ? "Male" : "Female"})
+            for (var i = 0; i < 500; ++i)
+                largeModel.append({"name": "Person " + i,
+                                   "age": Math.round(Math.random() * 100),
+                                   "gender": Math.random() > 0.5 ? "Male" : "Female"})
         }
     }
 
-    Column {
-        anchors.top: toolbar.bottom
-        anchors.right: parent.right
-        anchors.left: parent.left
-        anchors.bottom:  parent.bottom
+    component HeaderCell: BorderImage {
+        property alias text: headerText.text
+        height: 24
+        source: "images/header.png"
+        border { left: 2; right: 2; top: 2; bottom: 2 }
+        Text {
+            id: headerText
+            anchors.centerIn: parent
+            color: "#333"
+        }
+    }
+
+    StackLayout {
+        anchors.fill: parent
         anchors.margins: 8
+        currentIndex: bar.currentIndex
+        enabled: enabledCheck.checked
 
-        TabView {
-            id:frame
-            focus:true
-            enabled: enabledCheck.checked
-
-            property int margins: Qt.platform.os === "osx" ? 16 : 0
-
-            height: parent.height - 34
-            anchors.right: parent.right
-            anchors.left: parent.left
-            anchors.margins: margins
-
-            Tab {
-                title: "XmlListModel"
-
-                TableView {
-                    model: flickerModel
-                    anchors.fill: parent
-                    anchors.margins: 12
-
-                    TableViewColumn {
-                        role: "title"
-                        title: "Title"
-                        width: 120
-                    }
-                    TableViewColumn {
-                        role: "credit"
-                        title: "Credit"
-                        width: 120
-                    }
-                    TableViewColumn {
-                        role: "imagesource"
-                        title: "Image source"
-                        width: 200
-                        visible: true
-                    }
-
-                    frameVisible: frameCheckbox.checked
-                    headerVisible: headerCheckbox.checked
-                    sortIndicatorVisible: sortableCheckbox.checked
-                    alternatingRowColors: alternateCheckbox.checked
+        // Rows fetched live from an RSS feed through XmlListModel.
+        Frame {
+            padding: 1
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 0
+                    HeaderCell { text: "Title"; Layout.preferredWidth: 220 }
+                    HeaderCell { text: "Published"; Layout.preferredWidth: 180 }
+                    HeaderCell { text: "Link"; Layout.fillWidth: true }
                 }
-            }
-            Tab {
-                title: "Multivalue"
-
-                TableView {
-                    model: nestedModel
-                    anchors.fill: parent
-                    anchors.margins: 12
-
-                    TableViewColumn {
-                        role: "content"
-                        title: "Text and Color"
-                        width: 220
-                    }
-
-                    itemDelegate: Item {
-                        Rectangle{
-                            color: styleData.value.get(0).color
-                            anchors.top:parent.top
-                            anchors.right:parent.right
-                            anchors.bottom:parent.bottom
-                            anchors.margins: 4
-                            width:32
-                            border.color:"#666"
+                ListView {
+                    id: feedView
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    model: feedModel
+                    delegate: Rectangle {
+                        id: feedRow
+                        required property int index
+                        required property string title
+                        required property string pubDate
+                        required property string link
+                        property bool selected: ListView.isCurrentItem
+                        width: feedView.width
+                        height: 20
+                        color: selected ? "#448"
+                             : (alternateCheck.checked && index % 2 ? "#eee" : "#fff")
+                        Row {
+                            anchors.fill: parent
+                            Text { width: 220; text: feedRow.title; elide: Text.ElideRight; color: feedRow.selected ? "white" : "black"; anchors.verticalCenter: parent.verticalCenter; leftPadding: 4 }
+                            Text { width: 180; text: feedRow.pubDate; elide: Text.ElideRight; color: feedRow.selected ? "white" : "black"; anchors.verticalCenter: parent.verticalCenter; leftPadding: 4 }
+                            Text { width: 160; text: feedRow.link; elide: Text.ElideRight; color: feedRow.selected ? "white" : "black"; anchors.verticalCenter: parent.verticalCenter; leftPadding: 4 }
                         }
-                        Text {
-                            width: parent.width
-                            anchors.margins: 4
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            elide: styleData.elideMode
-                            text: styleData.value.get(0).description
-                            color: styleData.textColor
-                        }
-                    }
-
-                    frameVisible: frameCheckbox.checked
-                    headerVisible: headerCheckbox.checked
-                    sortIndicatorVisible: sortableCheckbox.checked
-                    alternatingRowColors: alternateCheckbox.checked
-                }
-            }
-            Tab {
-                title: "Generated"
-
-                TableView {
-                    model: largeModel
-                    anchors.margins: 12
-                    anchors.fill: parent
-                    TableViewColumn {
-                        role: "name"
-                        title: "Name"
-                        width: 120
-                    }
-                    TableViewColumn {
-                        role: "age"
-                        title: "Age"
-                        width: 120
-                    }
-                    TableViewColumn {
-                        role: "gender"
-                        title: "Gender"
-                        width: 120
-                    }
-                    frameVisible: frameCheckbox.checked
-                    headerVisible: headerCheckbox.checked
-                    sortIndicatorVisible: sortableCheckbox.checked
-                    alternatingRowColors: alternateCheckbox.checked
-                }
-            }
-
-            Tab {
-                title: "Delegates"
-                Item {
-                    anchors.fill: parent
-
-                    Component {
-                        id: delegate1
-                        Item {
-                            clip: true
-                            Text {
-                                width: parent.width
-                                anchors.margins: 4
-                                anchors.left: parent.left
-                                anchors.verticalCenter: parent.verticalCenter
-                                elide: styleData.elideMode
-                                text: styleData.value !== undefined  ? styleData.value : ""
-                                color: styleData.textColor
-                            }
-                        }
-                    }
-
-                    Component {
-                        id: delegate2
-                        Text {
-                            width: parent.width
-                            anchors.margins: 4
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            elide: styleData.elideMode
-                            text: styleData.value !== undefined  ? styleData.value : ""
-                            color: styleData.textColor
-                        }
-                    }
-
-                    Component {
-                        id: editableDelegate
-                        Item {
-
-                            Text {
-                                width: parent.width
-                                anchors.margins: 4
-                                anchors.left: parent.left
-                                anchors.verticalCenter: parent.verticalCenter
-                                elide: styleData.elideMode
-                                text: styleData.value !== undefined ? styleData.value : ""
-                                color: styleData.textColor
-                                visible: !styleData.selected
-                            }
-                            Loader { // Initialize text editor lazily to improve performance
-                                id: loaderEditor
-                                anchors.fill: parent
-                                anchors.margins: 4
-                                Connections {
-                                    target: loaderEditor.item
-                                    onAccepted: {
-                                        if (typeof styleData.value === 'number')
-                                            largeModel.setProperty(styleData.row, styleData.role, Number(parseFloat(loaderEditor.item.text).toFixed(0)))
-                                        else
-                                            largeModel.setProperty(styleData.row, styleData.role, loaderEditor.item.text)
-                                    }
-                                }
-                                sourceComponent: styleData.selected ? editor : null
-                                Component {
-                                    id: editor
-                                    TextInput {
-                                        id: textinput
-                                        color: styleData.textColor
-                                        text: styleData.value
-                                        MouseArea {
-                                            id: mouseArea
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            onClicked: textinput.forceActiveFocus()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    TableView {
-                        model: largeModel
-                        anchors.margins: 12
-                        anchors.fill:parent
-                        frameVisible: frameCheckbox.checked
-                        headerVisible: headerCheckbox.checked
-                        sortIndicatorVisible: sortableCheckbox.checked
-                        alternatingRowColors: alternateCheckbox.checked
-
-                        TableViewColumn {
-                            role: "name"
-                            title: "Name"
-                            width: 120
-                        }
-                        TableViewColumn {
-                            role: "age"
-                            title: "Age"
-                            width: 120
-                        }
-                        TableViewColumn {
-                            role: "gender"
-                            title: "Gender"
-                            width: 120
-                        }
-
-                        headerDelegate: BorderImage{
-                            source: "images/header.png"
-                            border{left:2;right:2;top:2;bottom:2}
-                            Text {
-                                text: styleData.value
-                                anchors.centerIn:parent
-                                color:"#333"
-                            }
-                        }
-
-                        rowDelegate: Rectangle {
-                            height: (delegateChooser.currentIndex == 1 && styleData.selected) ? 30 : 20
-                            Behavior on height{ NumberAnimation{} }
-
-                            color: styleData.selected ? "#448" : (styleData.alternate? "#eee" : "#fff")
-                            BorderImage{
-                                id: selected
-                                anchors.fill: parent
-                                source: "images/selectedrow.png"
-                                visible: styleData.selected
-                                border{left:2; right:2; top:2; bottom:2}
-                                SequentialAnimation {
-                                    running: true; loops: Animation.Infinite
-                                    NumberAnimation { target:selected; property: "opacity"; to: 1.0; duration: 900}
-                                    NumberAnimation { target:selected; property: "opacity"; to: 0.5; duration: 900}
-                                }
-                            }
-                        }
-
-                        itemDelegate: {
-                            if (delegateChooser.currentIndex == 2)
-                                return editableDelegate;
-                            else
-                                return delegate1;
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: feedView.currentIndex = feedRow.index
                         }
                     }
                 }
             }
         }
-        Row{
-            x: 12
-            height: 34
-            CheckBox{
-                id: alternateCheckbox
-                checked: true
-                text: "Alternate"
-                anchors.verticalCenter: parent.verticalCenter
+
+        // A larger, locally generated model.
+        Frame {
+            padding: 1
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 0
+                    HeaderCell { text: "Name"; Layout.preferredWidth: 120 }
+                    HeaderCell { text: "Age"; Layout.preferredWidth: 120 }
+                    HeaderCell { text: "Gender"; Layout.fillWidth: true }
+                }
+                ListView {
+                    id: largeView
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    model: largeModel
+                    delegate: Rectangle {
+                        required property int index
+                        required property string name
+                        required property int age
+                        required property string gender
+                        property bool selected: ListView.isCurrentItem
+                        width: largeView.width
+                        height: 20
+                        color: alternateCheck.checked && index % 2 ? "#eee" : "#fff"
+                        BorderImage {
+                            anchors.fill: parent
+                            source: "images/selectedrow.png"
+                            visible: selected
+                            border { left: 2; right: 2; top: 2; bottom: 2 }
+                        }
+                        Row {
+                            anchors.fill: parent
+                            Text { width: 120; text: name; anchors.verticalCenter: parent.verticalCenter; leftPadding: 4 }
+                            Text { width: 120; text: age; anchors.verticalCenter: parent.verticalCenter; leftPadding: 4 }
+                            Text { width: 120; text: gender; anchors.verticalCenter: parent.verticalCenter; leftPadding: 4 }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: largeView.currentIndex = index
+                        }
+                    }
+                }
             }
-            CheckBox{
-                id: sortableCheckbox
-                checked: false
-                text: "Sort indicator"
-                anchors.verticalCenter: parent.verticalCenter
-            }
-            CheckBox{
-                id: frameCheckbox
-                checked: true
-                text: "Frame"
-                anchors.verticalCenter: parent.verticalCenter
-            }
-            CheckBox{
-                id: headerCheckbox
-                checked: true
-                text: "Headers"
-                anchors.verticalCenter: parent.verticalCenter
+        }
+
+        // The same model, with cells edited in place.
+        Frame {
+            padding: 1
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 0
+                    HeaderCell { text: "Name"; Layout.preferredWidth: 160 }
+                    HeaderCell { text: "Age"; Layout.preferredWidth: 120 }
+                    HeaderCell { text: "Gender"; Layout.fillWidth: true }
+                }
+                ListView {
+                    id: editView
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    model: largeModel
+                    delegate: Rectangle {
+                        required property int index
+                        required property string name
+                        required property int age
+                        required property string gender
+                        width: editView.width
+                        height: 24
+                        color: alternateCheck.checked && index % 2 ? "#eee" : "#fff"
+                        Row {
+                            anchors.fill: parent
+                            TextInput {
+                                width: 160; text: name
+                                anchors.verticalCenter: parent.verticalCenter; leftPadding: 4
+                                onEditingFinished: largeModel.setProperty(index, "name", text)
+                            }
+                            TextInput {
+                                width: 120; text: age
+                                anchors.verticalCenter: parent.verticalCenter; leftPadding: 4
+                                validator: IntValidator { bottom: 0; top: 150 }
+                                onEditingFinished: largeModel.setProperty(index, "age", parseInt(text))
+                            }
+                            TextInput {
+                                width: 120; text: gender
+                                anchors.verticalCenter: parent.verticalCenter; leftPadding: 4
+                                onEditingFinished: largeModel.setProperty(index, "gender", text)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

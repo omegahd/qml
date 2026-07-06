@@ -1,17 +1,21 @@
+//go:build !windows
+
 package main
 
 import (
 	"fmt"
-	"github.com/omegahd/qml"
 	"image/png"
 	"os"
+
+	"github.com/omegahd/qml"
+	"github.com/omegahd/qml/webengine"
 )
 
 const webview = `
-import QtQuick 2.0
-import QtWebKit 3.0
+import QtQuick
+import QtWebEngine
 
-WebView {
+WebEngineView {
     width: 1024
     height: 768
 }
@@ -22,6 +26,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "usage: %s <url> <png path>\n", os.Args[0])
 		os.Exit(1)
 	}
+	webengine.Initialize()
 	if err := qml.Run(run); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -51,8 +56,8 @@ type Control struct {
 	done chan error
 }
 
-func (ctrl *Control) Snapshot(request qml.Object) {
-	if request.Int("status") != 2 {
+func (ctrl *Control) Snapshot() {
+	if ctrl.win.Root().Bool("loading") {
 		return
 	}
 	f, err := os.Create(os.Args[2])

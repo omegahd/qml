@@ -38,350 +38,125 @@
 **
 ****************************************************************************/
 
+// In Qt Quick Controls 2 there is no separate Styles module; controls are
+// customized by replacing their visual delegates (background, contentItem,
+// handle, indicator, ...) directly. The native platform styles do not
+// support customization, so this file imports the Basic style explicitly.
 
-
-
-
-import QtQuick 2.2
-import QtQuick.Controls 1.1
-import QtQuick.Controls.Styles 1.1
-import QtQuick.Particles 2.0
-import QtQuick.Layouts 1.0
+import QtQuick
+import QtQuick.Controls.Basic
+import QtQuick.Layouts
 
 Item {
-    id: root
-    width: 300
-    height: 200
+    anchors.fill: parent
 
-    property int columnWidth: 120
-    GridLayout {
-        rowSpacing: 12
-        columnSpacing: 30
-        anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.margins: 30
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 8
+        spacing: 12
 
-        Button {
-            text: "Push me"
-            style: ButtonStyle { }
-            implicitWidth: columnWidth
-        }
-        Button {
-            text: "Push me"
-            style: ButtonStyle {
+        RowLayout {
+            spacing: 12
+
+            Button {
+                id: styledButton
+                text: "Push me"
+                implicitWidth: 100
+                implicitHeight: 25
+                contentItem: Text {
+                    text: styledButton.text
+                    color: "#333"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
                 background: BorderImage {
-                    source: control.pressed ? "../images/button-pressed.png" : "../images/button.png"
-                    border.left: 4 ; border.right: 4 ; border.top: 4 ; border.bottom: 4
+                    source: styledButton.pressed ? "../images/button-pressed.png" : "../images/button.png"
+                    border { left: 4; right: 4; top: 4; bottom: 4 }
                 }
             }
-            implicitWidth: columnWidth
-        }
-        Button {
-            text: "Push me"
-            style: buttonStyle
-            implicitWidth: columnWidth
-        }
 
-        TextField {
-            Layout.row: 1
-            style: TextFieldStyle { }
-            implicitWidth: columnWidth
-        }
-        TextField {
-            style: TextFieldStyle {
+            TextField {
+                id: styledField
+                text: "Custom text field"
+                color: "#333"
+                implicitWidth: 150
+                implicitHeight: 25
                 background: BorderImage {
                     source: "../images/textfield.png"
-                    border.left: 4 ; border.right: 4 ; border.top: 4 ; border.bottom: 4
+                    border { left: 4; right: 4; top: 4; bottom: 4 }
                 }
             }
-            implicitWidth: columnWidth
-        }
-        TextField {
-            style: textfieldStyle
-            implicitWidth: columnWidth
+
+            Item { Layout.fillWidth: true }
         }
 
-        Slider {
-            id: slider1
-            Layout.row: 2
-            value: 0.5
-            implicitWidth: columnWidth
-            style: SliderStyle { }
-        }
-        Slider {
-            id: slider2
-            value: 0.5
-            implicitWidth: columnWidth
-            style: SliderStyle {
-                groove: BorderImage {
-                    height: 6
-                    border.top: 1
-                    border.bottom: 1
+        RowLayout {
+            spacing: 12
+
+            Slider {
+                id: styledSlider
+                value: 0.5
+                Layout.preferredWidth: 180
+                background: BorderImage {
+                    y: (styledSlider.height - height) / 2
+                    width: styledSlider.availableWidth
+                    height: 12
                     source: "../images/progress-background.png"
-                    border.left: 6
-                    border.right: 6
+                    border { left: 4; right: 4; top: 4; bottom: 4 }
+                }
+                handle: Image {
+                    x: styledSlider.leftPadding + styledSlider.visualPosition * (styledSlider.availableWidth - width)
+                    y: (styledSlider.height - height) / 2
+                    source: "../images/slider-handle.png"
+                }
+            }
+
+            ProgressBar {
+                id: styledProgress
+                value: styledSlider.value
+                implicitHeight: 12
+                Layout.preferredWidth: 180
+                background: BorderImage {
+                    source: "../images/progress-background.png"
+                    border { left: 4; right: 4; top: 4; bottom: 4 }
+                }
+                contentItem: Item {
+                    implicitHeight: 12
                     BorderImage {
-                        anchors.verticalCenter: parent.verticalCenter
-                        source: "../images/progress-fill.png"
-                        border.left: 5 ; border.top: 1
-                        border.right: 5 ; border.bottom: 1
-                        width: styleData.handlePosition
+                        width: styledProgress.visualPosition * parent.width
                         height: parent.height
-                    }
-                }
-                handle: Item {
-                    width: 13
-                    height: 13
-                    Image {
-                        anchors.centerIn: parent
-                        source: "../images/slider-handle.png"
+                        source: "../images/progress-fill.png"
+                        border { left: 4; right: 4; top: 4; bottom: 4 }
                     }
                 }
             }
-        }
-        Slider {
-            id: slider3
-            value: 0.5
-            implicitWidth: columnWidth
-            style: sliderStyle
+
+            Item { Layout.fillWidth: true }
         }
 
-        ProgressBar {
-            Layout.row: 3
-            value: slider1.value
-            implicitWidth: columnWidth
-            style: ProgressBarStyle{ }
-        }
-        ProgressBar {
-            value: slider2.value
-            implicitWidth: columnWidth
-            style: progressBarStyle
-        }
-        ProgressBar {
-            value: slider3.value
-            implicitWidth: columnWidth
-            style: progressBarStyle2
-        }
+        TabBar {
+            id: styledTabs
+            Layout.preferredWidth: 300
 
-        CheckBox {
-            text: "CheckBox"
-            style: CheckBoxStyle{}
-            Layout.row: 4
-            implicitWidth: columnWidth
-        }
-        RadioButton {
-            style: RadioButtonStyle{}
-            text: "RadioButton"
-            implicitWidth: columnWidth
-        }
-
-        ComboBox {
-            model: ["Paris", "Oslo", "New York"]
-            style: ComboBoxStyle{}
-            implicitWidth: columnWidth
-        }
-
-        TabView {
-            Layout.row: 5
-            Layout.columnSpan: 3
-            Layout.fillWidth: true
-            implicitHeight: 30
-            Tab { title: "One" ; Item {}}
-            Tab { title: "Two" ; Item {}}
-            Tab { title: "Three" ; Item {}}
-            Tab { title: "Four" ; Item {}}
-            style: TabViewStyle {}
-        }
-
-        TabView {
-            Layout.row: 6
-            Layout.columnSpan: 3
-            Layout.fillWidth: true
-            implicitHeight: 30
-            Tab { title: "One" ; Item {}}
-            Tab { title: "Two" ; Item {}}
-            Tab { title: "Three" ; Item {}}
-            Tab { title: "Four" ; Item {}}
-            style: tabViewStyle
-        }
-    }
-
-    // Style delegates:
-
-    property Component buttonStyle: ButtonStyle {
-        background: Rectangle {
-            implicitHeight: 22
-            implicitWidth: columnWidth
-            color: control.pressed ? "darkGray" : control.activeFocus ? "#cdd" : "#ccc"
-            antialiasing: true
-            border.color: "gray"
-            radius: height/2
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: 1
-                color: "transparent"
-                antialiasing: true
-                visible: !control.pressed
-                border.color: "#aaffffff"
-                radius: height/2
-            }
-        }
-    }
-
-    property Component textfieldStyle: TextFieldStyle {
-        background: Rectangle {
-            implicitWidth: columnWidth
-            implicitHeight: 22
-            color: "#f0f0f0"
-            antialiasing: true
-            border.color: "gray"
-            radius: height/2
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: 1
-                color: "transparent"
-                antialiasing: true
-                border.color: "#aaffffff"
-                radius: height/2
-            }
-        }
-    }
-
-    property Component sliderStyle: SliderStyle {
-        handle: Rectangle {
-            width: 18
-            height: 18
-            color: control.pressed ? "darkGray" : "lightGray"
-            border.color: "gray"
-            antialiasing: true
-            radius: height/2
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: 1
-                color: "transparent"
-                antialiasing: true
-                border.color: "#eee"
-                radius: height/2
-            }
-        }
-
-        groove: Rectangle {
-            height: 8
-            implicitWidth: columnWidth
-            implicitHeight: 22
-
-            antialiasing: true
-            color: "#ccc"
-            border.color: "#777"
-            radius: height/2
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: 1
-                color: "transparent"
-                antialiasing: true
-                border.color: "#66ffffff"
-                radius: height/2
-            }
-        }
-    }
-
-    property Component progressBarStyle: ProgressBarStyle {
-        background: BorderImage {
-            source: "../images/progress-background.png"
-            border.left: 2 ; border.right: 2 ; border.top: 2 ; border.bottom: 2
-        }
-        progress: Item {
-            clip: true
-            BorderImage {
-                anchors.fill: parent
-                anchors.rightMargin: (control.value < control.maximumValue) ? -4 : 0
-                source: "../images/progress-fill.png"
-                border.left: 10 ; border.right: 10
-                Rectangle {
-                    width: 1
-                    color: "#a70"
-                    opacity: 0.8
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 1
-                    anchors.right: parent.right
-                    visible: control.value < control.maximumValue
-                    anchors.rightMargin: -parent.anchors.rightMargin
+            component StyledTab: TabButton {
+                id: tab
+                contentItem: Text {
+                    text: tab.text
+                    color: "#333"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                background: BorderImage {
+                    source: tab.checked ? "../images/tab_selected.png" : "../images/tab.png"
+                    border { left: 4; right: 4; top: 4; bottom: 4 }
                 }
             }
-            ParticleSystem{ id: bubbles; running: visible }
-            ImageParticle{
-                id: fireball
-                system: bubbles
-                source: "../images/bubble.png"
-                opacity: 0.7
-            }
-            Emitter{
-                system: bubbles
-                anchors.bottom: parent.bottom
-                anchors.margins: 4
-                anchors.bottomMargin: -4
-                anchors.left: parent.left
-                anchors.right: parent.right
-                size: 4
-                sizeVariation: 4
-                acceleration: PointDirection{ y: -6; xVariation: 3 }
-                emitRate: 6 * control.value
-                lifeSpan: 3000
-            }
-        }
-    }
 
-    property Component progressBarStyle2: ProgressBarStyle {
-        background: Rectangle {
-            implicitWidth: columnWidth
-            implicitHeight: 24
-            color: "#f0f0f0"
-            border.color: "gray"
+            StyledTab { text: "One" }
+            StyledTab { text: "Two" }
+            StyledTab { text: "Three" }
         }
-        progress: Rectangle {
-            color: "#ccc"
-            border.color: "gray"
-            Rectangle {
-                color: "transparent"
-                border.color: "#44ffffff"
-                anchors.fill: parent
-                anchors.margins: 1
-            }
-        }
-    }
 
-    property Component tabViewStyle: TabViewStyle {
-        tabOverlap: 16
-        frameOverlap: 4
-        tabsMovable: true
-
-        frame: Rectangle {
-            gradient: Gradient{
-                GradientStop { color: "#e5e5e5" ; position: 0 }
-                GradientStop { color: "#e0e0e0" ; position: 1 }
-            }
-            border.color: "#898989"
-            Rectangle { anchors.fill: parent ; anchors.margins: 1 ; border.color: "white" ; color: "transparent" }
-        }
-        tab: Item {
-            property int totalOverlap: tabOverlap * (control.count - 1)
-            implicitWidth: Math.min ((styleData.availableWidth + totalOverlap)/control.count - 4, image.sourceSize.width)
-            implicitHeight: image.sourceSize.height
-            BorderImage {
-                id: image
-                anchors.fill: parent
-                source: styleData.selected ? "../images/tab_selected.png" : "../images/tab.png"
-                border.left: 30
-                smooth: false
-                border.right: 30
-            }
-            Text {
-                text: styleData.title
-                anchors.centerIn: parent
-            }
-        }
-        leftCorner: Item { implicitWidth: 12 }
+        Item { Layout.fillHeight: true }
     }
 }
-

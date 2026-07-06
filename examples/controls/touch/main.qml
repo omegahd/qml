@@ -38,8 +38,8 @@
 **
 ****************************************************************************/
 
-import QtQuick 2.2
-import QtQuick.Controls 1.1
+import QtQuick
+import QtQuick.Controls
 import "content"
 
 ApplicationWindow {
@@ -52,7 +52,7 @@ ApplicationWindow {
         anchors.fill: parent
     }
 
-    toolBar: BorderImage {
+    header: BorderImage {
         border.bottom: 8
         source: "images/toolbar.png"
         width: parent.width
@@ -125,23 +125,24 @@ ApplicationWindow {
         anchors.fill: parent
         // Implements back key navigation
         focus: true
-        Keys.onReleased: if (event.key === Qt.Key_Back && stackView.depth > 1) {
-                             stackView.pop();
-                             event.accepted = true;
-                         }
+        Keys.onReleased: (event) => {
+            if (event.key === Qt.Key_Back && stackView.depth > 1) {
+                stackView.pop();
+                event.accepted = true;
+            }
+        }
 
         initialItem: Item {
-            width: parent.width
-            height: parent.height
             ListView {
                 model: pageModel
                 anchors.fill: parent
                 delegate: AndroidDelegate {
+                    required property string title
+                    required property string page
                     text: title
                     onClicked: stackView.push(Qt.resolvedUrl(page))
                 }
             }
         }
     }
-
 }

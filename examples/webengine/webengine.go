@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/qml.v1"
-	"gopkg.in/qml.v1/webengine"
+	"github.com/omegahd/qml"
+	"github.com/omegahd/qml/webengine"
 )
 
 func main() {
-	fmt.Println(qml.Run(func() error {
-		webengine.Initialize()
+	// Since Qt 6 the web engine must be initialized before the Qt
+	// application is created, so this must precede qml.Run.
+	webengine.Initialize()
 
+	fmt.Println(qml.Run(func() error {
 		engine := qml.NewEngine()
 		engine.On("quit", func() { os.Exit(0) })
 

@@ -38,13 +38,8 @@
 **
 ****************************************************************************/
 
-
-
-
-
-import QtQuick 2.2
-import QtQuick.Controls 1.1
-import QtQuick.Controls.Styles 1.1
+import QtQuick
+import QtQuick.Controls.Basic
 
 Item {
     width: parent.width
@@ -66,49 +61,31 @@ Item {
         }
     }
 
+    component TouchProgressBar: ProgressBar {
+        id: control
+        implicitWidth: 400
+        implicitHeight: 15
+        background: Rectangle {
+            color: "#444"
+            opacity: 0.8
+        }
+        contentItem: Item {
+            Rectangle {
+                antialiasing: true
+                radius: 1
+                color: "#468bb7"
+                height: parent.height
+                width: control.visualPosition * parent.width
+            }
+        }
+    }
+
     Column {
         spacing: 40
         anchors.centerIn: parent
 
-        ProgressBar {
-            anchors.margins: 20
-            style: touchStyle
-            width: 400
-            value: progress
-        }
-
-        ProgressBar {
-            anchors.margins: 20
-            style: touchStyle
-            width: 400
-            value: 1 - progress
-        }
-
-        ProgressBar {
-            anchors.margins: 20
-            style: touchStyle
-            value: 1
-            width: 400
-        }
-
-    }
-
-    Component {
-        id: touchStyle
-        ProgressBarStyle {
-            panel: Rectangle {
-                implicitHeight: 15
-                implicitWidth: 400
-                color: "#444"
-                opacity: 0.8
-                Rectangle {
-                    antialiasing: true
-                    radius: 1
-                    color: "#468bb7"
-                    height: parent.height
-                    width: parent.width * control.value / control.maximumValue
-                }
-            }
-        }
+        TouchProgressBar { value: progress }
+        TouchProgressBar { value: 1 - progress }
+        TouchProgressBar { value: 1 }
     }
 }

@@ -33,6 +33,6 @@ goroutine 1 [running, locked to thread]:
 panic(0x5716e0, 0xc820090070)
 	/usr/local/go/src/runtime/panic.go:464 +0x3e6
 .../vendor/gopkg.in/qml%2ev1.getFoldFromGoRef(0x7ffc3a3bc044, 0x8aec00)
-.../vendor/gopkg.in/qml.v1/bridge.go:230 +0x9e
+.../vendor/github.com/omegahd/qml/bridge.go:230 +0x9e
 ... cut ...
 ```

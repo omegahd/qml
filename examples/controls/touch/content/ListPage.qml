@@ -38,45 +38,25 @@
 **
 ****************************************************************************/
 
+import QtQuick
+import QtQuick.Controls.Basic
 
-
-
-
-import QtQuick 2.2
-import QtQuick.Controls 1.1
-import QtQuick.Controls.Styles 1.1
-
-ScrollView {
+ListView {
     width: parent.width
     height: parent.height
+    clip: true
 
-    flickableItem.interactive: true
-
-    ListView {
-        anchors.fill: parent
-        model: 100
-        delegate: AndroidDelegate {
-            text: "Item #" + modelData
-        }
+    model: 100
+    delegate: AndroidDelegate {
+        required property int modelData
+        text: "Item #" + modelData
     }
 
-    style: ScrollViewStyle {
-        transientScrollBars: true
-        handle: Item {
-            implicitWidth: 14
-            implicitHeight: 26
-            Rectangle {
-                color: "#424246"
-                anchors.fill: parent
-                anchors.topMargin: 6
-                anchors.leftMargin: 4
-                anchors.rightMargin: 4
-                anchors.bottomMargin: 6
-            }
+    ScrollBar.vertical: ScrollBar {
+        implicitWidth: 14
+        contentItem: Rectangle {
+            color: "#424246"
         }
-        scrollBarBackground: Item {
-            implicitWidth: 14
-            implicitHeight: 26
-        }
+        background: Item { }
     }
 }

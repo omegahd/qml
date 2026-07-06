@@ -38,66 +38,66 @@
 **
 ****************************************************************************/
 
-
-
-
-
-import QtQuick 2.2
-import QtQuick.Controls 1.1
-//import QtQuick.XmlListModel 2.1
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
 Item {
-    id: root
-    width: 600
-    height: 300
     anchors.fill: parent
-    anchors.margins: Qt.platform.os === "osx" ? 12 : 6
-
-//    XmlListModel {
-//        id: flickerModel
-//        source: "http://api.flickr.com/services/feeds/photos_public.gne?format=rss2&tags=" + "Cat"
-//        query: "/rss/channel/item"
-//        namespaceDeclarations: "declare namespace media=\"http://search.yahoo.com/mrss/\";"
-//        XmlRole { name: "title"; query: "title/string()" }
-//        XmlRole { name: "imagesource"; query: "media:thumbnail/@url/string()" }
-//        XmlRole { name: "credit"; query: "media:credit/string()" }
-//    }
 
     ListModel {
         id: dummyModel
         Component.onCompleted: {
-            for (var i = 0 ; i < 100 ; ++i) {
-                append({"index": i, "title": "A title " + i, "imagesource" :"http://someurl.com", "credit" : "N/A"})
-            }
+            for (var i = 0; i < 100; ++i)
+                dummyModel.append({"title": "A title " + i, "credit": "Some credit"})
         }
     }
 
-    TableView{
-        model: dummyModel
+    Frame {
         anchors.fill: parent
+        anchors.margins: 8
+        padding: 1
 
-        TableViewColumn {
-            role: "index"
-            title: "#"
-            width: 36
-            resizable: false
-            movable: false
-        }
-        TableViewColumn {
-            role: "title"
-            title: "Title"
-            width: 120
-        }
-        TableViewColumn {
-            role: "credit"
-            title: "Credit"
-            width: 120
-        }
-        TableViewColumn {
-            role: "imagesource"
-            title: "Image source"
-            width: 200
-            visible: true
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 0
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 0
+                Label { text: "Index"; font.bold: true; padding: 4; Layout.preferredWidth: 80 }
+                Label { text: "Title"; font.bold: true; padding: 4; Layout.preferredWidth: 200 }
+                Label { text: "Credit"; font.bold: true; padding: 4; Layout.fillWidth: true }
+            }
+
+            ListView {
+                id: view
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                model: dummyModel
+                ScrollBar.vertical: ScrollBar { }
+                delegate: Rectangle {
+                    id: row
+                    required property int index
+                    required property string title
+                    required property string credit
+                    property bool selected: ListView.isCurrentItem
+                    width: view.width
+                    height: 22
+                    color: selected ? "#448" : (index % 2 ? "#eee" : "#fff")
+                    Row {
+                        anchors.fill: parent
+                        Text { width: 80; text: row.index; color: row.selected ? "white" : "black"; anchors.verticalCenter: parent.verticalCenter; leftPadding: 4 }
+                        Text { width: 200; text: row.title; color: row.selected ? "white" : "black"; anchors.verticalCenter: parent.verticalCenter; leftPadding: 4 }
+                        Text { width: 200; text: row.credit; color: row.selected ? "white" : "black"; anchors.verticalCenter: parent.verticalCenter; leftPadding: 4 }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: view.currentIndex = row.index
+                    }
+                }
+            }
         }
     }
 }
