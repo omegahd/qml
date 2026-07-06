@@ -2,9 +2,9 @@
 
 package GL
 
-// #cgo CXXFLAGS: -std=c++0x -pedantic-errors -Wall -fno-strict-aliasing
+// #cgo CXXFLAGS: -std=c++17 -pedantic-errors -Wall -fno-strict-aliasing
 // #cgo LDFLAGS: -lstdc++
-// #cgo pkg-config: Qt5Core Qt5OpenGL
+// #cgo pkg-config: Qt6Core Qt6OpenGL
 //
 // #include "funcs.h"
 //
