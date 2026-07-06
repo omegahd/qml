@@ -7,6 +7,50 @@ This repository aims to keep go-qml/qml working. It includes several fixed and n
 forked from go-qml, but some of them are just copy and pasted, so the original author for the commit is sometimes lost (sorry!).
 The only fix I wrote are the support for Qt 5.11+ (trivial) and support for Go 1.12.
 
+The package has since been ported to Qt 6 (developed and tested against Qt 6.11 / MinGW 13.1
+on Windows). See "Building against Qt 6" below. The `webengine` subpackage was ported to
+Qt 6 WebEngineQuick but is excluded on Windows, where Qt does not ship WebEngine for the
+MinGW toolchain; use it on Linux or macOS (requires the Qt6WebEngineQuick development files).
+Note that since Qt 6, webengine.Initialize must be called before qml.Run.
+
+
+Building against Qt 6
+---------------------
+
+Requirements:
+
+  * A Qt 6 installation with development files, including the private headers
+    (the default Qt online installer layout includes them)
+  * A C++17 compiler matching your Qt build (on Windows: the MinGW toolchain
+    offered by the Qt installer)
+  * `pkg-config`, with `PKG_CONFIG_PATH` pointing at Qt's `lib/pkgconfig`
+
+Because the dynamic meta object support relies on Qt private headers whose include
+paths embed the exact Qt version, `CGO_CPPFLAGS` must point into your Qt installation.
+The `build-env.sh` script at the repository root derives everything automatically —
+source it before building (optionally passing the Qt prefix):
+
+    . ./build-env.sh                            # auto-detect via qtpaths6/qmake6
+    . ./build-env.sh C:/Qt6/6.11.1/mingw_64     # explicit prefix (Git Bash)
+    go build .
+
+Or set the environment manually. For example, on Windows with Qt 6.11.1 installed
+under `C:\Qt6` (Git Bash syntax):
+
+    export QT=C:/Qt6/6.11.1/mingw_64
+    export PATH="C:/Qt6/Tools/mingw1310_64/bin:$QT/bin:$PATH"
+    export PKG_CONFIG_PATH=$QT/lib/pkgconfig
+    export CGO_CPPFLAGS="-I$QT/include/QtCore/6.11.1 -I$QT/include/QtCore/6.11.1/QtCore"
+    go build .
+
+Adjust the version segment (`6.11.1`) to the Qt version you have installed. On Linux
+distributions the equivalent private header directories are typically provided by a
+`qt6-base-private-dev` (or similar) package.
+
+Note that the scene graph is forced to the OpenGL backend (instead of the Qt 6
+RHI default) so that the OpenGL painting APIs (`gl/*` packages and `Paint`
+methods) keep working.
+
 
 Documentation
 -------------
