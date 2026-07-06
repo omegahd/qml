@@ -1,6 +1,6 @@
-#include <QtWebEngine>
+#include <QtWebEngineQuick/qtwebenginequickglobal.h>
 #include "webengine.h"
 
 void webengineInitialize() {
-	QtWebEngine::initialize();
+	QtWebEngineQuick::initialize();
 }
