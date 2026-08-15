@@ -55,6 +55,33 @@ Qt 6 API. All of these were hit in a single source file:
 `On("playbackStateChanged", …)` are unchanged, and `playbackState`'s enum values
 (Stopped=0, Playing=1, Paused=2) did not move.
 
+### How Go names arrive in QML
+
+Exported fields and methods are renamed on the way across, and the rule is *not*
+"lowercase the first letter". `appendLoweredName` (`datatype.go`) lowercases the
+**whole leading run of capitals**, except that when that run is followed by a
+lowercase letter its last capital is kept. So a trailing acronym survives intact
+while a leading one does not:
+
+| Go | QML |
+|---|---|
+| `Volume` | `volume` |
+| `IsEnabled` | `isEnabled` |
+| `GetDeviceID` | `getDeviceID` |
+| `FeedURL` | `feedURL` |
+| `URL` | `url` |
+| `ID` | `id` |
+| `SSLEnabled` | `sslEnabled` |
+| `HTTPServer` | `httpServer` |
+| `ParseXMLData` | `parseXMLData` |
+
+The acronym cases are the ones to watch. Go style says `FeedURL`, and it is easy
+to reach for `feedUrl` in QML — but that name does not exist, and using it is
+**silent**: nothing reports an unknown property, you simply get `undefined` where
+the value should be. Assigned to a typed property it surfaces only as e.g.
+`Unable to assign [undefined] to QUrl`; bound somewhere untyped it shows nothing
+at all.
+
 
 Credits and lineage
 -------------------
